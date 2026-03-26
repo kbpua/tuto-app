@@ -5,8 +5,8 @@ import { applyRateLimit, getClientKey } from './_rateLimit.js'
 
 const InputSchema = z.object({
   sourceText: z.string().min(200, 'Please provide at least 200 characters of source text.').max(12000, 'Source text is too long (max: 12,000 characters).'),
-  cardCount: z.number().int().min(3).max(30).optional(),
-  quizCount: z.number().int().min(3).max(20).optional(),
+  cardCount: z.number().int().min(3).max(120).optional(),
+  quizCount: z.number().int().min(3).max(60).optional(),
 })
 
 const DifficultyEnum = z.enum(['easy', 'medium', 'hard'])

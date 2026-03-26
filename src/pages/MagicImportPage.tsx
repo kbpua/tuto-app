@@ -68,18 +68,21 @@ function suggestCountsFromText(sourceText: string): { suggestedCards: number; su
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
   const bulletLines = lines.filter((l) => /^(\-|\*|•|\d+\.)\s+/.test(l)).length
   const headingLines = lines.filter((l) => /^[A-Z0-9][A-Z0-9\s\-\(\):]{6,}$/.test(l)).length
+  const likelySlideMarkers = lines.filter((l) => /\b(slide|chapter|module|lesson|topic)\b/i.test(l)).length
 
   const sentenceCount = (text.match(/[.!?]+/g) ?? []).length
 
-  // Heuristic: bullets/headings indicate "concept density" → more cards per word.
-  const structureBoost = 1 + Math.min(0.6, (bulletLines + headingLines) / 25)
-  const baseCards = (wordCount / 90) * structureBoost // ~1 card per 90 words, adjusted by structure
-  const sentenceBoost = Math.min(0.4, sentenceCount / 80)
+  // Heuristic: estimate concept density from text volume + structure + likely slide/topic markers.
+  const structureBoost = 1 + Math.min(0.9, (bulletLines + headingLines) / 20)
+  const baseCards = wordCount / 75
+  const sentenceBoost = Math.min(0.5, sentenceCount / 70)
+  const markerBoost = Math.min(0.5, likelySlideMarkers / 35)
+  const conceptEstimate = baseCards * (1 + sentenceBoost + markerBoost) * structureBoost
 
-  const suggestedCards = clampInt(baseCards * (1 + sentenceBoost), 3, 30)
-  const suggestedQuiz = clampInt(Math.max(3, suggestedCards * 0.6), 3, 20)
+  const suggestedCards = clampInt(conceptEstimate, 6, 120)
+  const suggestedQuiz = clampInt(Math.max(5, suggestedCards * 0.6), 5, 60)
 
-  const rationale = `Based on ~${wordCount.toLocaleString()} words, ${bulletLines} bullet lines, ${headingLines} headings.`
+  const rationale = `Based on ~${wordCount.toLocaleString()} words, ${bulletLines} bullet lines, ${headingLines} headings, ${likelySlideMarkers} topic markers.`
   return { suggestedCards, suggestedQuiz, rationale }
 }
 
@@ -103,8 +106,8 @@ export function MagicImportPage() {
 
   const [sourceText, setSourceText] = useState('')
   const [isExtractingPdf, setIsExtractingPdf] = useState(false)
-  const [cardCount, setCardCount] = useState(12)
-  const [quizCount, setQuizCount] = useState(8)
+  const [cardCount, setCardCount] = useState(24)
+  const [quizCount, setQuizCount] = useState(12)
   const [countsManuallyEdited, setCountsManuallyEdited] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -195,15 +198,21 @@ export function MagicImportPage() {
     setError('')
     setIsExtractingPdf(true)
     try {
-      // Lazy-load PDF parser only when needed to keep initial page bundle smaller.
+      // Use legacy build for broader browser compatibility (notably older iOS Safari engines).
       const [{ getDocument, GlobalWorkerOptions }, worker] = await Promise.all([
-        import('pdfjs-dist'),
-        import('pdfjs-dist/build/pdf.worker?url'),
+        import('pdfjs-dist/legacy/build/pdf.mjs'),
+        import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'),
       ])
       GlobalWorkerOptions.workerSrc = worker.default
 
       const buf = await file.arrayBuffer()
-      const pdf = await getDocument({ data: buf }).promise
+      let pdf
+      try {
+        pdf = await getDocument({ data: buf }).promise
+      } catch {
+        // Worker startup can fail in some mobile webviews; retry without worker to keep import usable.
+        pdf = await getDocument({ data: buf, disableWorker: true } as any).promise
+      }
       const maxPages = Math.min(pdf.numPages, 25)
       const parts: string[] = []
 
@@ -358,7 +367,7 @@ export function MagicImportPage() {
                 value={cardCount}
                 onChange={(e) => {
                   setCountsManuallyEdited(true)
-                  setCardCount(Math.max(3, Math.min(30, Number(e.target.value) || 12)))
+                  setCardCount(Math.max(3, Math.min(120, Number(e.target.value) || 24)))
                 }}
                 className="ml-2 w-20 rounded-lg border border-edge bg-inset px-2 py-1 text-xs text-heading"
               />
@@ -370,7 +379,7 @@ export function MagicImportPage() {
                 value={quizCount}
                 onChange={(e) => {
                   setCountsManuallyEdited(true)
-                  setQuizCount(Math.max(3, Math.min(20, Number(e.target.value) || 8)))
+                  setQuizCount(Math.max(3, Math.min(60, Number(e.target.value) || 12)))
                 }}
                 className="ml-2 w-20 rounded-lg border border-edge bg-inset px-2 py-1 text-xs text-heading"
               />
