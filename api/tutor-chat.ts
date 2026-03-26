@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { z } from 'zod'
-import { applyRateLimit, getClientKey } from './_rateLimit'
+import { applyRateLimit, getClientKey } from './_rateLimit.js'
 
 const InputSchema = z.object({
   messages: z.array(

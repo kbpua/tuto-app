@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { z } from 'zod'
-import { applyRateLimit, getClientKey } from './_rateLimit'
+import { applyRateLimit, getClientKey } from './_rateLimit.js'
 
 const InputSchema = z.object({
   sourceText: z.string().min(200, 'Please provide at least 200 characters of source text.').max(12000, 'Source text is too long (max: 12,000 characters).'),
