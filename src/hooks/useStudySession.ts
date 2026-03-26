@@ -16,6 +16,8 @@ export type SessionResult = {
   xpAwarded: number
 }
 
+const MAX_REQUEUE_PER_CARD_PER_SESSION = 3
+
 export function useStudySession(deckId: string | undefined) {
   const deck = useDecksStore((s) => s.decks.find((d) => d.id === deckId))
   const updateCardSM2 = useDecksStore((s) => s.updateCardSM2)
@@ -36,6 +38,7 @@ export function useStudySession(deckId: string | undefined) {
   const [sessionXP, setSessionXP] = useState(0)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
+  const [requeueCounts, setRequeueCounts] = useState<Record<string, number>>({})
 
   // Build the due-card queue whenever the deck changes
   useEffect(() => {
@@ -48,6 +51,7 @@ export function useStudySession(deckId: string | undefined) {
     setSessionXP(0)
     setElapsedSeconds(0)
     setIsPaused(false)
+    setRequeueCounts({})
     setIsComplete(due.length === 0)
   }, [deckId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -79,9 +83,24 @@ export function useStudySession(deckId: string | undefined) {
         { card: currentCard, rating, xpAwarded: xp },
       ])
 
-      // 4. Advance queue or finish session
-      const isLast = currentIndex >= queue.length - 1
-      if (isLast) {
+      // 4. Anki-style relearning: non-easy cards reappear later in the same run.
+      // This keeps failed/hard cards in active rotation without creating infinite loops.
+      const requeuedSoFar = requeueCounts[currentCard.id] ?? 0
+      const shouldRequeue =
+        rating !== 'easy' && requeuedSoFar < MAX_REQUEUE_PER_CARD_PER_SESSION
+
+      if (shouldRequeue) {
+        setQueue((prev) => [...prev, currentCard])
+        setRequeueCounts((prev) => ({
+          ...prev,
+          [currentCard.id]: (prev[currentCard.id] ?? 0) + 1,
+        }))
+      }
+
+      // 5. Advance queue or finish session.
+      // If this was the last visible card but got requeued, move forward to that requeued item.
+      const isLastVisible = currentIndex >= queue.length - 1
+      if (isLastVisible && !shouldRequeue) {
         markDeckStudied(deckId)
         checkAndUpdateStreak()
         const accuracy = Math.round(
@@ -93,7 +112,7 @@ export function useStudySession(deckId: string | undefined) {
         )
         recordStudySession({
           deckId,
-          cardsReviewed: queue.length,
+          cardsReviewed: results.length + 1,
           accuracy,
           durationSec: elapsedSeconds,
           xpEarned: sessionXP + xp,
@@ -116,6 +135,7 @@ export function useStudySession(deckId: string | undefined) {
       checkAndUpdateStreak,
       recordStudySession,
       results,
+      requeueCounts,
       elapsedSeconds,
       sessionXP,
     ],
@@ -133,8 +153,28 @@ export function useStudySession(deckId: string | undefined) {
     setSessionXP(0)
     setElapsedSeconds(0)
     setIsPaused(false)
+    setRequeueCounts({})
     setIsComplete(nextQueue.length === 0)
   }, [deck])
+
+  const reviewMissedCards = useCallback(() => {
+    if (!deck) return
+    const missedIds = new Set(
+      results
+        .filter((r) => r.rating === 'again' || r.rating === 'hard')
+        .map((r) => r.card.id),
+    )
+    const missedCards = deck.cards.filter((c) => missedIds.has(c.id))
+    setQueue(missedCards)
+    setCurrentIndex(0)
+    setFlipped(false)
+    setResults([])
+    setSessionXP(0)
+    setElapsedSeconds(0)
+    setIsPaused(false)
+    setRequeueCounts({})
+    setIsComplete(missedCards.length === 0)
+  }, [deck, results])
 
   const addCardToDeck = useCallback(
     (front: string, back: string) => {
@@ -177,5 +217,6 @@ export function useStudySession(deckId: string | undefined) {
     resume: () => setIsPaused(false),
     togglePause: () => setIsPaused((p) => !p),
     addCardToDeck,
+    reviewMissedCards,
   }
 }

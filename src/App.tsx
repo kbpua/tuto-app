@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './layout/AppShell'
 import { flushCloudQueue, initCloudQueueState } from './lib/cloudSyncQueue'
+import { initAudioOnFirstInteraction } from './lib/sound'
 import { useAuthStore } from './store/useAuthStore'
 import { useAppStore } from './store/useAppStore'
 import { useDecksStore } from './store/useDecksStore'
@@ -33,6 +34,9 @@ const SettingsPage = lazy(() =>
 )
 const AuthPage = lazy(() =>
   import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })),
+)
+const MagicImportPage = lazy(() =>
+  import('./pages/MagicImportPage').then((m) => ({ default: m.MagicImportPage })),
 )
 
 function PageFallback() {
@@ -81,6 +85,7 @@ function App() {
 
   useEffect(() => {
     initCloudQueueState()
+    initAudioOnFirstInteraction()
     const onOnline = () => {
       void flushCloudQueue()
     }
@@ -128,6 +133,7 @@ function App() {
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/import" element={<MagicImportPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

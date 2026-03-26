@@ -17,6 +17,10 @@ type QuizState = {
   hydrateAttemptsFromCloud: () => Promise<void>
   averageAccuracy: () => number
   recentAccuracyTrend: (count?: number) => number[]
+  totalAttempts: () => number
+  bestAccuracy: () => number
+  averageDurationSec: () => number
+  strongAttemptStreak: (threshold?: number) => number
 }
 
 export const useQuizStore = create<QuizState>()(
@@ -70,6 +74,39 @@ export const useQuizStore = create<QuizState>()(
           .slice(0, count)
           .reverse()
           .map((a) => Math.round((a.correctAnswers / a.totalQuestions) * 100))
+      },
+
+      totalAttempts() {
+        return get().attempts.length
+      },
+
+      bestAccuracy() {
+        const attempts = get().attempts
+        if (attempts.length === 0) return 0
+        return Math.max(
+          ...attempts.map((a) =>
+            Math.round((a.correctAnswers / Math.max(a.totalQuestions, 1)) * 100),
+          ),
+        )
+      },
+
+      averageDurationSec() {
+        const attempts = get().attempts
+        if (attempts.length === 0) return 0
+        const total = attempts.reduce((acc, a) => acc + a.durationSec, 0)
+        return Math.round(total / attempts.length)
+      },
+
+      strongAttemptStreak(threshold = 80) {
+        const attempts = get().attempts
+        if (attempts.length === 0) return 0
+        let streak = 0
+        for (const a of attempts) {
+          const acc = Math.round((a.correctAnswers / Math.max(a.totalQuestions, 1)) * 100)
+          if (acc >= threshold) streak += 1
+          else break
+        }
+        return streak
       },
     }),
     { name: 'studyforge-quiz' },

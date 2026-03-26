@@ -1,7 +1,9 @@
-import { Bot, BookOpen, House, Trophy, User, BrainCircuit, Settings, LogOut } from 'lucide-react'
+import { Bot, BookOpen, House, Trophy, User, BrainCircuit, Settings, LogOut, Sparkles } from 'lucide-react'
 import { useEffect } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
 import tutoLogo from '../assets/brand/Tuto.webp'
+import { playSfx } from '../lib/sound'
 import { useAuthStore } from '../store/useAuthStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 
@@ -9,6 +11,7 @@ const navItems = [
   { to: '/', label: 'Home', icon: House },
   { to: '/decks', label: 'Decks', icon: BookOpen },
   { to: '/study', label: 'Study', icon: BrainCircuit },
+  { to: '/import', label: 'Import', icon: Sparkles },
   { to: '/tutor', label: 'Tutor', icon: Bot },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { to: '/profile', label: 'Profile', icon: User },
@@ -16,6 +19,7 @@ const navItems = [
 ]
 
 export function AppShell() {
+  const location = useLocation()
   const theme = useSettingsStore((s) => s.theme)
   const user = useAuthStore((s) => s.user)
   const signOut = useAuthStore((s) => s.signOut)
@@ -54,6 +58,7 @@ export function AppShell() {
               <NavLink
                 key={to}
                 to={to}
+                onClick={() => playSfx('ui_click')}
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${isActive
                     ? 'bg-brand-violet/25 text-brand-violet'
@@ -72,13 +77,16 @@ export function AppShell() {
         <div className="min-h-screen flex-1 pb-20 lg:pb-0">
           <header className="sticky top-0 z-30 border-b border-edge bg-inset/70 px-4 py-3 backdrop-blur md:px-8">
             <div className="flex items-center justify-between">
-              <p className="text-sm uppercase tracking-[0.25em] text-muted">Halina&apos;t maTuto!</p>
+              <p className="text-sm uppercase tracking-[0.22em] text-muted">Focus Mode</p>
               <div className="flex items-center gap-2">
                 <span className="hidden text-xs text-muted sm:inline">{user?.email}</span>
                 <button
                   type="button"
                   aria-label="Log out"
-                  onClick={() => void signOut()}
+                  onClick={() => {
+                    playSfx('ui_click')
+                    void signOut()
+                  }}
                   className="inline-flex items-center gap-1 rounded-xl border border-edge px-3 py-2 text-xs text-sub transition hover:border-brand-blue/50 focus:outline-none focus:ring-2 focus:ring-brand-blue/60"
                 >
                   <LogOut className="h-3.5 w-3.5" />
@@ -88,7 +96,17 @@ export function AppShell() {
             </div>
           </header>
           <main className="px-4 py-6 md:px-8 md:py-8">
-            <Outlet />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
           </main>
         </div>
       </div>
@@ -103,6 +121,7 @@ export function AppShell() {
             <NavLink
               key={to}
               to={to}
+              onClick={() => playSfx('ui_click')}
               className={({ isActive }) =>
                 `flex flex-col items-center gap-0.5 rounded-lg px-1.5 py-1.5 text-[10px] transition sm:px-2 sm:text-[11px] ${isActive ? 'text-brand-blue' : 'text-muted'
                 }`

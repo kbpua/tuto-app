@@ -36,6 +36,10 @@ export function DashboardPage() {
 
   const averageAccuracy = useQuizStore((s) => s.averageAccuracy)
   const recentAccuracyTrend = useQuizStore((s) => s.recentAccuracyTrend)
+  const totalAttempts = useQuizStore((s) => s.totalAttempts)
+  const bestAccuracy = useQuizStore((s) => s.bestAccuracy)
+  const averageDurationSec = useQuizStore((s) => s.averageDurationSec)
+  const strongAttemptStreak = useQuizStore((s) => s.strongAttemptStreak)
   const avgAccuracy =
     studyHistory.length > 0 || averageAccuracy() > 0
       ? Math.round(
@@ -46,6 +50,8 @@ export function DashboardPage() {
       : 0
   const studyTimeMinutes = Math.floor(studySecondsToday / 60)
   const trend = recentAccuracyTrend(7)
+  const avgQuizDurationMin = Math.max(1, Math.round(averageDurationSec() / 60))
+  const strongStreak = strongAttemptStreak(80)
   const hasAnyProgress = studyHistory.length > 0 || trend.length > 0 || totalXp > 0
 
   return (
@@ -172,6 +178,28 @@ export function DashboardPage() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="rounded-2xl border border-edge bg-card p-5">
+        <p className="mb-3 text-xs uppercase tracking-widest text-muted">Quiz Performance</p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-edge bg-inset p-4">
+            <p className="text-xs text-muted">Total attempts</p>
+            <p className="mt-1 text-2xl font-black text-heading">{totalAttempts()}</p>
+          </div>
+          <div className="rounded-xl border border-edge bg-inset p-4">
+            <p className="text-xs text-muted">Best accuracy</p>
+            <p className="mt-1 text-2xl font-black text-brand-green">{bestAccuracy()}%</p>
+          </div>
+          <div className="rounded-xl border border-edge bg-inset p-4">
+            <p className="text-xs text-muted">Avg duration</p>
+            <p className="mt-1 text-2xl font-black text-brand-blue">{avgQuizDurationMin}m</p>
+          </div>
+          <div className="rounded-xl border border-edge bg-inset p-4">
+            <p className="text-xs text-muted">80%+ streak</p>
+            <p className="mt-1 text-2xl font-black text-brand-violet">{strongStreak}</p>
+          </div>
+        </div>
       </section>
     </div>
   )
