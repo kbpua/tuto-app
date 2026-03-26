@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { z } from 'zod'
 import { applyRateLimit, getClientKey } from './_rateLimit.js'
@@ -111,6 +112,79 @@ function readBodySafely(req: { body?: unknown }): { ok: true; body: unknown } | 
   }
 }
 
+async function generateWithOpenRouter(params: {
+  apiKey: string
+  model: string
+  sourceText: string
+  cardCount: number
+  quizCount: number
+  strictRetry?: boolean
+}): Promise<MagicImportOutput> {
+  const prompt = [
+    SYSTEM_RULES,
+    params.strictRetry ? 'Your previous output was invalid. Return only a strict JSON object that exactly matches the schema.' : '',
+    'Output schema:',
+    JSON.stringify({
+      summary: 'string',
+      flashcards: [
+        {
+          front: 'string',
+          back: 'string',
+          difficulty: 'easy | medium | hard',
+          tags: ['string'],
+        },
+      ],
+      quiz: [
+        {
+          type: 'mcq | written | matching',
+          question: 'string',
+          options: ['string', 'string', 'string', 'string'],
+          answer: 'string',
+          explanation: 'string',
+        },
+      ],
+    }),
+    `Create exactly ${params.cardCount} flashcards and ${params.quizCount} quiz items.`,
+    'Source text:',
+    params.sourceText,
+  ].filter(Boolean).join('\n\n')
+
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${params.apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.APP_ORIGIN ?? 'http://localhost:5173',
+      'X-Title': 'Tuto App',
+    },
+    body: JSON.stringify({
+      model: params.model,
+      temperature: params.strictRetry ? 0.2 : 0.5,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: SYSTEM_RULES },
+        { role: 'user', content: prompt },
+      ],
+    }),
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`OpenRouter failed (${response.status}): ${text.slice(0, 500)}`)
+  }
+
+  const json = await response.json() as {
+    choices?: Array<{ message?: { content?: string } }>
+  }
+  const content = json.choices?.[0]?.message?.content?.trim()
+  if (!content) {
+    throw new Error('OpenRouter returned empty content.')
+  }
+
+  const parsedJson = JSON.parse(extractJsonBlock(content)) as unknown
+  return normalizeOutput(parsedJson as RawOutput)
+}
+
 async function generateStructuredContent(params: {
   apiKey: string
   model: string
@@ -170,6 +244,9 @@ type ApiReq = {
   headers?: Record<string, string | string[] | undefined>
 }
 type ApiRes = { status: (code: number) => { json: (body: unknown) => void } }
+const DAILY_LIMIT = 3
+const DAY_MS = 24 * 60 * 60 * 1000
+type DailyQuota = { dailyUsed: number; dailyRemaining: number; dailyLimit: number }
 
 export default async function handler(req: ApiReq, res: ApiRes) {
   try {
@@ -187,6 +264,23 @@ export default async function handler(req: ApiReq, res: ApiRes) {
       res.status(429).json({
         error: 'Too many requests. Please wait before generating again.',
         retryAfterSec: Math.ceil(limitResult.resetInMs / 1000),
+      })
+      return
+    }
+    const dailyLimitResult = applyRateLimit({
+      key: getClientKey(req, 'magic-import-daily'),
+      limit: DAILY_LIMIT,
+      windowMs: DAY_MS,
+    })
+    if (!dailyLimitResult.allowed) {
+      res.status(429).json({
+        error: 'Daily upload limit reached (3/day). Please try again tomorrow.',
+        retryAfterSec: Math.ceil(dailyLimitResult.resetInMs / 1000),
+        quota: {
+          dailyUsed: DAILY_LIMIT,
+          dailyRemaining: 0,
+          dailyLimit: DAILY_LIMIT,
+        } satisfies DailyQuota,
       })
       return
     }
@@ -209,40 +303,100 @@ export default async function handler(req: ApiReq, res: ApiRes) {
       return
     }
 
-    const apiKey = process.env.GEMINI_API_KEY
-    const model = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash'
+    const openRouterApiKey = process.env.OPENROUTER_API_KEY
+    const openRouterModel = process.env.OPENROUTER_MODEL ?? 'meta-llama/llama-3.1-8b-instruct'
+    const geminiApiKey = process.env.GEMINI_API_KEY
+    const geminiModel = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash'
 
-    if (!apiKey) {
-      res.status(500).json({ error: 'Server is missing GEMINI_API_KEY.' })
+    if (!openRouterApiKey && !geminiApiKey) {
+      res.status(500).json({ error: 'Server is missing OPENROUTER_API_KEY and GEMINI_API_KEY.' })
       return
     }
 
     const { sourceText, cardCount = 12, quizCount = 8 } = parsedInput.data
 
     try {
-      const data = await generateStructuredContent({
-        apiKey,
-        model,
-        sourceText,
-        cardCount,
-        quizCount,
-      })
-      res.status(200).json({ data })
-      return
-    } catch (firstError) {
-      try {
-        const data = await generateStructuredContent({
-          apiKey,
-          model,
+      const data = openRouterApiKey
+        ? await generateWithOpenRouter({
+          apiKey: openRouterApiKey,
+          model: openRouterModel,
           sourceText,
           cardCount,
           quizCount,
-          strictRetry: true,
         })
-        res.status(200).json({ data, retried: true })
+        : await generateStructuredContent({
+          apiKey: geminiApiKey as string,
+          model: geminiModel,
+          sourceText,
+          cardCount,
+          quizCount,
+        })
+      res.status(200).json({
+        data,
+        quota: {
+          dailyUsed: DAILY_LIMIT - dailyLimitResult.remaining,
+          dailyRemaining: dailyLimitResult.remaining,
+          dailyLimit: DAILY_LIMIT,
+        } satisfies DailyQuota,
+      })
+      return
+    } catch (firstError) {
+      try {
+        const data = openRouterApiKey
+          ? await generateWithOpenRouter({
+            apiKey: openRouterApiKey,
+            model: openRouterModel,
+            sourceText,
+            cardCount,
+            quizCount,
+            strictRetry: true,
+          })
+          : await generateStructuredContent({
+            apiKey: geminiApiKey as string,
+            model: geminiModel,
+            sourceText,
+            cardCount,
+            quizCount,
+            strictRetry: true,
+          })
+        res.status(200).json({
+          data,
+          retried: true,
+          quota: {
+            dailyUsed: DAILY_LIMIT - dailyLimitResult.remaining,
+            dailyRemaining: dailyLimitResult.remaining,
+            dailyLimit: DAILY_LIMIT,
+          } satisfies DailyQuota,
+        })
         return
       } catch (secondError) {
-        console.error('Magic import generation failed:', firstError, secondError)
+        if (openRouterApiKey && geminiApiKey) {
+          try {
+            const fallbackData = await generateStructuredContent({
+              apiKey: geminiApiKey,
+              model: geminiModel,
+              sourceText,
+              cardCount,
+              quizCount,
+              strictRetry: true,
+            })
+            res.status(200).json({
+              data: fallbackData,
+              retried: true,
+              fallback: 'gemini',
+              quota: {
+                dailyUsed: DAILY_LIMIT - dailyLimitResult.remaining,
+                dailyRemaining: dailyLimitResult.remaining,
+                dailyLimit: DAILY_LIMIT,
+              } satisfies DailyQuota,
+            })
+            return
+          } catch (fallbackError) {
+            console.error('Magic import generation failed:', firstError, secondError, fallbackError)
+          }
+        } else {
+          console.error('Magic import generation failed:', firstError, secondError)
+        }
         res.status(500).json({
           error: 'Failed to generate structured content. Please try again with cleaner or shorter source text.',
           details: process.env.NODE_ENV === 'production'
@@ -250,7 +404,7 @@ export default async function handler(req: ApiReq, res: ApiRes) {
             : {
               firstAttempt: errorMessage(firstError),
               secondAttempt: errorMessage(secondError),
-              model,
+              provider: openRouterApiKey ? 'openrouter' : 'gemini',
             },
         })
         return

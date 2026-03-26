@@ -14,6 +14,8 @@ import { useMixedStudySession } from '../hooks/useMixedStudySession'
 import { useDecksStore } from '../store/useDecksStore'
 import type { ConfidenceRating } from '../lib/sm2'
 import type { Card } from '../store/useDecksStore'
+import { getApiJsonHeaders } from '../lib/apiAuth'
+import { useAiQuotaStore } from '../store/useAiQuotaStore'
 
 // ── Confidence buttons ─────────────────────────────────────────────────────────
 
@@ -29,6 +31,7 @@ type TutorMsg = {
   role: 'assistant' | 'user'
   text: string
 }
+type QuotaInfo = { dailyRemaining: number; dailyLimit: number }
 
 function tryParseJson(text: string): unknown {
   try {
@@ -86,7 +89,7 @@ function DeckPicker() {
               <div className="mt-3 h-1.5 rounded-full bg-rail">
                 <div className="h-full rounded-full bg-brand-violet" style={{ width: `${mastery}%` }} />
               </div>
-            </button>
+          </button>
           )
         })}
       </div>
@@ -138,6 +141,8 @@ function StudySession({ deckId }: { deckId: string }) {
   const [askLoading, setAskLoading] = useState(false)
   const [askError, setAskError] = useState('')
   const [askMessages, setAskMessages] = useState<TutorMsg[]>([])
+  const askQuota = useAiQuotaStore((s) => s.tutorQuota)
+  const setTutorQuota = useAiQuotaStore((s) => s.setTutorQuota)
   const [completionSfxPlayed, setCompletionSfxPlayed] = useState(false)
   const askThreadRef = useRef<HTMLDivElement | null>(null)
   const askBottomRef = useRef<HTMLDivElement | null>(null)
@@ -356,7 +361,7 @@ function StudySession({ deckId }: { deckId: string }) {
     try {
       const res = await fetch('/api/tutor-chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getApiJsonHeaders(),
         body: JSON.stringify({
           messages: [
             ...askMessages.map((m) => ({ role: m.role, text: m.text })),
@@ -366,7 +371,8 @@ function StudySession({ deckId }: { deckId: string }) {
       })
 
       const raw = await res.text()
-      const parsed = tryParseJson(raw) as { reply?: string; error?: string } | null
+      const parsed = tryParseJson(raw) as { reply?: string; error?: string; quota?: QuotaInfo } | null
+      if (parsed?.quota) setTutorQuota(parsed.quota)
       if (!res.ok || !parsed?.reply) {
         setAskError(parsed?.error ?? (raw.trim() ? raw : `Ask AI failed (HTTP ${res.status})`))
         return
@@ -682,6 +688,9 @@ function StudySession({ deckId }: { deckId: string }) {
             <MessageCircle className="h-4 w-4 text-brand-blue" />
             <p className="text-sm font-semibold text-heading">Ask AI About This Card</p>
           </div>
+          <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+            AI usage limit: {askQuota ? `${askQuota.dailyRemaining}/${askQuota.dailyLimit} tutor queries remaining today` : '3 tutor queries per day per account.'}
+          </p>
 
           <div className="rounded-xl border border-edge bg-inset p-3 text-sm">
             <p className="text-xs uppercase tracking-widest text-muted">Given content</p>

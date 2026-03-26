@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Zap, Wand2, Save, Trash2, Plus, BrainCircuit, FileUp } from 'lucide-react'
 import { useDecksStore } from '../store/useDecksStore'
+import { getApiJsonHeaders } from '../lib/apiAuth'
+import { useAiQuotaStore } from '../store/useAiQuotaStore'
 
 type AICard = {
   front: string
@@ -38,6 +40,10 @@ type MagicImportResponse = {
     quiz: AIQuizItem[]
   }
   retried?: boolean
+  quota?: {
+    dailyRemaining: number
+    dailyLimit: number
+  }
 }
 
 function tryParseJson(text: string): unknown {
@@ -107,6 +113,8 @@ export function MagicImportPage() {
   const [cards, setCards] = useState<AICard[]>([])
   const [quiz, setQuiz] = useState<AIQuizItem[]>([])
   const [retried, setRetried] = useState(false)
+  const quota = useAiQuotaStore((s) => s.importQuota)
+  const setImportQuota = useAiQuotaStore((s) => s.setImportQuota)
 
   const [targetDeckId, setTargetDeckId] = useState<string>(decks[0]?.id ?? '')
   const [newDeckTitle, setNewDeckTitle] = useState('')
@@ -133,7 +141,7 @@ export function MagicImportPage() {
     try {
       const res = await fetch('/api/magic-import', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getApiJsonHeaders(),
         body: JSON.stringify({
           sourceText: sourceText.trim(),
           cardCount,
@@ -143,7 +151,10 @@ export function MagicImportPage() {
 
       const rawText = await res.text()
       const parsed = tryParseJson(rawText)
-      const json = (parsed ?? {}) as MagicImportResponse | { error?: string; details?: unknown }
+      const json = (parsed ?? {}) as MagicImportResponse | { error?: string; details?: unknown; quota?: { dailyRemaining: number; dailyLimit: number } }
+      if (typeof json === 'object' && json && 'quota' in json && json.quota) {
+        setImportQuota(json.quota)
+      }
 
       if (!res.ok) {
         const msgFromJson =
@@ -388,6 +399,9 @@ export function MagicImportPage() {
             </button>
           </div>
         </div>
+        <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+          AI usage limit: {quota ? `${quota.dailyRemaining}/${quota.dailyLimit} flash-import uploads remaining today` : '3 flash-import uploads per day per account.'}
+        </p>
 
         <textarea
           value={sourceText}

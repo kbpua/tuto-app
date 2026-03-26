@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ChatBubble } from '../components/ChatBubble'
+import { getApiJsonHeaders } from '../lib/apiAuth'
+import { useAiQuotaStore } from '../store/useAiQuotaStore'
 
 type ChatMsg = {
   id: string
   role: 'assistant' | 'user'
   text: string
 }
+type QuotaInfo = { dailyRemaining: number; dailyLimit: number }
 
 function tryParseJson(text: string): unknown {
   try {
@@ -33,6 +36,8 @@ export function TutorPage() {
   ])
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState('')
+  const quota = useAiQuotaStore((s) => s.tutorQuota)
+  const setTutorQuota = useAiQuotaStore((s) => s.setTutorQuota)
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -64,7 +69,7 @@ export function TutorPage() {
     try {
       const res = await fetch('/api/tutor-chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getApiJsonHeaders(),
         body: JSON.stringify({
           messages: [...apiPayload.messages, { role: 'user', text: t }],
         }),
@@ -72,7 +77,8 @@ export function TutorPage() {
 
       const rawText = await res.text()
       const parsed = tryParseJson(rawText)
-      const json = (parsed ?? {}) as { reply?: string; error?: string }
+      const json = (parsed ?? {}) as { reply?: string; error?: string; quota?: QuotaInfo }
+      if (json.quota) setTutorQuota(json.quota)
 
       if (!res.ok || !json.reply) {
         const msgFromJson = json.error ?? ''
@@ -97,6 +103,9 @@ export function TutorPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-black text-heading">Talk to Tuto the Tuko🦎</h1>
+      <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+        AI usage limit: {quota ? `${quota.dailyRemaining}/${quota.dailyLimit} remaining today` : '3 tutor queries per day per account.'}
+      </p>
 
       <div className="rounded-2xl border border-edge bg-card p-4">
         <div className="mb-4 flex flex-wrap gap-2">

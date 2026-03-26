@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 type RateLimitConfig = {
   key: string
   limit: number
@@ -42,10 +44,63 @@ export function applyRateLimit(config: RateLimitConfig): RateLimitResult {
   }
 }
 
+function getHeaderValue(
+  headers: Record<string, string | string[] | undefined> | undefined,
+  name: string,
+): string | undefined {
+  if (!headers) return undefined
+  const direct = headers[name]
+  if (Array.isArray(direct)) return direct[0]
+  if (typeof direct === 'string') return direct
+
+  const lower = name.toLowerCase()
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() !== lower) continue
+    if (Array.isArray(value)) return value[0]
+    return value
+  }
+  return undefined
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split('.')
+  if (parts.length < 2 || !parts[1]) return null
+
+  try {
+    const base64url = parts[1]
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = `${base64}${'='.repeat((4 - (base64.length % 4)) % 4)}`
+    const decoded = Buffer.from(padded, 'base64').toString('utf8')
+    return JSON.parse(decoded) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+function getUserSubject(headers: Record<string, string | string[] | undefined> | undefined): string | null {
+  const authHeader = getHeaderValue(headers, 'authorization')
+  if (!authHeader) return null
+
+  const match = authHeader.match(/^Bearer\s+(.+)$/i)
+  const token = match?.[1]?.trim()
+  if (!token) return null
+
+  const payload = decodeJwtPayload(token)
+  const sub = payload?.sub
+  if (typeof sub !== 'string' || !sub) return null
+
+  return `user:${sub}`
+}
+
 export function getClientKey(req: { headers?: Record<string, string | string[] | undefined> }, routeName: string): string {
+  const userSubject = getUserSubject(req.headers)
+  if (userSubject) {
+    return `${routeName}:${userSubject}`
+  }
+
   const xff = req.headers?.['x-forwarded-for']
   const forwarded = Array.isArray(xff) ? xff[0] : xff
   const ip = forwarded?.split(',')[0]?.trim() || 'unknown'
-  return `${routeName}:${ip}`
+  return `${routeName}:ip:${ip}`
 }
 
