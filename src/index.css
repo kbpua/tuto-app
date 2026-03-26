@@ -1,33 +1,65 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;900&family=Space+Grotesk:wght@500;700&display=swap');
 @import "tailwindcss";
 
+/* ─── Design Tokens ────────────────────────────────────────────────────────── */
+
 @theme {
+  /* Surfaces */
   --color-app: #07090f;
+  --color-card: #0f172a;
+  --color-inset: #020617;
+  --color-rail: #1e293b;
+  --color-edge: #ffffff1a;
+
+  /* Text */
+  --color-heading: #f1f5f9;
+  --color-sub: #cbd5e1;
+  --color-muted: #94a3b8;
+  --color-dim: #64748b;
+
+  /* Brand */
   --color-brand-blue: #39a0ff;
   --color-brand-green: #3fff8f;
   --color-brand-violet: #9b4dff;
+
+  /* Fonts */
   --font-sans: 'Outfit', 'Segoe UI', sans-serif;
   --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
 }
 
+/* ─── Light Theme ──────────────────────────────────────────────────────────── */
+
 @layer base {
   :root[data-theme='light'] {
-    --color-app: #eaf2ff;
+    --color-app: #f8fafc;
+    --color-card: #ffffff;
+    --color-inset: #f1f5f9;
+    --color-rail: #e2e8f0;
+    --color-edge: #0000001a;
+
+    --color-heading: #1e293b;
+    --color-sub: #475569;
+    --color-muted: #64748b;
+    --color-dim: #94a3b8;
+
+    --color-brand-blue: #2563eb;
+    --color-brand-green: #16a34a;
+    --color-brand-violet: #7c3aed;
   }
 
   * {
-    @apply border-slate-800;
+    @apply border-edge;
   }
 
   body {
-    @apply m-0 bg-app font-sans text-slate-100 antialiased;
+    @apply m-0 bg-app font-sans text-sub antialiased;
     background-image: radial-gradient(circle at 20% 0%, rgba(57, 160, 255, 0.15), transparent 35%),
       radial-gradient(circle at 90% 20%, rgba(155, 77, 255, 0.2), transparent 30%);
   }
 
   :root[data-theme='light'] body {
-    background-image: radial-gradient(circle at 20% 0%, rgba(57, 160, 255, 0.1), transparent 35%),
-      radial-gradient(circle at 90% 20%, rgba(155, 77, 255, 0.08), transparent 30%);
+    background-image: radial-gradient(circle at 20% 0%, rgba(57, 160, 255, 0.06), transparent 35%),
+      radial-gradient(circle at 90% 20%, rgba(155, 77, 255, 0.04), transparent 30%);
   }
 
   h1,
@@ -37,6 +69,13 @@
   }
 }
 
+/* ─── Utilities ────────────────────────────────────────────────────────────── */
+
 @utility shadow-neon {
   box-shadow: 0 10px 40px rgba(57, 160, 255, 0.18), 0 0 0 1px rgba(57, 160, 255, 0.25);
+}
+
+/* Softer shadow for light mode */
+:root[data-theme='light'] .shadow-neon {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.06);
 }

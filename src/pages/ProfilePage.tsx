@@ -5,12 +5,12 @@ export function ProfilePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-black text-slate-100">Profile</h1>
-      <section className="rounded-2xl border border-white/10 bg-slate-900/70 p-5">
-        <p className="text-sm text-slate-300">
-          Signed in as <span className="font-semibold text-slate-100">{user?.email}</span>
+      <h1 className="text-2xl font-black text-heading">Profile</h1>
+      <section className="rounded-2xl border border-edge bg-card p-5">
+        <p className="text-sm text-sub">
+          Signed in as <span className="font-semibold text-heading">{user?.email}</span>
         </p>
-        <p className="mt-2 text-sm text-slate-300">
+        <p className="mt-2 text-sm text-sub">
           Profile and achievements customization will be added in the next phase.
         </p>
       </section>

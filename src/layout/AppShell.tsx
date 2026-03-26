@@ -25,15 +25,16 @@ export function AppShell() {
   }, [theme])
 
   return (
-    <div className="min-h-screen bg-app text-slate-100">
+    <div className="min-h-screen bg-app text-heading">
       <div className="mx-auto flex max-w-[1400px]">
+        {/* ── Desktop Sidebar ─────────────────────────────────────────── */}
         <aside
           aria-label="Primary"
-          className="sticky top-0 hidden h-screen w-72 flex-col border-r border-white/10 bg-slate-950/80 px-5 py-6 lg:flex"
+          className="sticky top-0 hidden h-screen w-72 flex-col border-r border-edge bg-inset/80 px-5 py-6 backdrop-blur lg:flex"
         >
           <div className="mb-8">
             <div className="flex items-center gap-3">
-              <div className="grid h-14 w-14 place-items-center overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-neon">
+              <div className="grid h-14 w-14 place-items-center overflow-hidden rounded-3xl border border-edge bg-card shadow-neon">
                 <img
                   src={tutoLogo}
                   alt="Tuto mascot"
@@ -42,7 +43,7 @@ export function AppShell() {
               </div>
               <div>
                 <h1 className="text-2xl font-black tracking-tight text-brand-green">tuto</h1>
-                <p className="text-[11px] uppercase tracking-[0.22em] text-slate-400">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-muted">
                   Halina&apos;t maTuto!
                 </p>
               </div>
@@ -56,7 +57,7 @@ export function AppShell() {
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${isActive
                     ? 'bg-brand-violet/25 text-brand-violet'
-                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                    : 'text-sub hover:bg-heading/5 hover:text-heading'
                   }`
                 }
               >
@@ -67,17 +68,18 @@ export function AppShell() {
           </nav>
         </aside>
 
+        {/* ── Main Content Area ───────────────────────────────────────── */}
         <div className="min-h-screen flex-1 pb-20 lg:pb-0">
-          <header className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/70 px-4 py-3 backdrop-blur md:px-8">
+          <header className="sticky top-0 z-30 border-b border-edge bg-inset/70 px-4 py-3 backdrop-blur md:px-8">
             <div className="flex items-center justify-between">
-              <p className="text-sm uppercase tracking-[0.25em] text-slate-400">Halina&apos;t maTuto!</p>
+              <p className="text-sm uppercase tracking-[0.25em] text-muted">Halina&apos;t maTuto!</p>
               <div className="flex items-center gap-2">
-                <span className="hidden text-xs text-slate-400 sm:inline">{user?.email}</span>
+                <span className="hidden text-xs text-muted sm:inline">{user?.email}</span>
                 <button
                   type="button"
                   aria-label="Log out"
                   onClick={() => void signOut()}
-                  className="inline-flex items-center gap-1 rounded-xl border border-white/15 px-3 py-2 text-xs text-slate-300 transition hover:border-brand-blue/50 focus:outline-none focus:ring-2 focus:ring-brand-blue/60"
+                  className="inline-flex items-center gap-1 rounded-xl border border-edge px-3 py-2 text-xs text-sub transition hover:border-brand-blue/50 focus:outline-none focus:ring-2 focus:ring-brand-blue/60"
                 >
                   <LogOut className="h-3.5 w-3.5" />
                   Logout
@@ -91,21 +93,23 @@ export function AppShell() {
         </div>
       </div>
 
+      {/* ── Mobile Bottom Nav ───────────────────────────────────────── */}
       <nav
         aria-label="Bottom navigation"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/90 p-2 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-inset/90 p-1.5 backdrop-blur sm:p-2 lg:hidden"
       >
-        <div className="grid grid-cols-7 gap-1">
+        <div className="flex justify-around">
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11px] ${isActive ? 'text-brand-blue' : 'text-slate-400'}`
+                `flex flex-col items-center gap-0.5 rounded-lg px-1.5 py-1.5 text-[10px] transition sm:px-2 sm:text-[11px] ${isActive ? 'text-brand-blue' : 'text-muted'
+                }`
               }
             >
-              <Icon className="h-4 w-4" />
-              {label}
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden min-[400px]:inline">{label}</span>
             </NavLink>
           ))}
         </div>

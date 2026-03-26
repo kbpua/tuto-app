@@ -38,9 +38,9 @@ const AuthPage = lazy(() =>
 function PageFallback() {
   return (
     <div className="space-y-3">
-      <div className="h-6 w-52 animate-pulse rounded bg-slate-800/60" />
-      <div className="h-24 animate-pulse rounded-2xl bg-slate-900/70" />
-      <div className="h-24 animate-pulse rounded-2xl bg-slate-900/70" />
+      <div className="h-6 w-52 animate-pulse rounded bg-rail" />
+      <div className="h-24 animate-pulse rounded-2xl bg-card" />
+      <div className="h-24 animate-pulse rounded-2xl bg-card" />
     </div>
   )
 }
@@ -72,7 +72,7 @@ function App() {
   const hydrateAttemptsFromCloud = useQuizStore((s) => s.hydrateAttemptsFromCloud)
 
   useEffect(() => {
-    let unsubscribe: () => void = () => {}
+    let unsubscribe: () => void = () => { }
     initialize().then((cleanup) => {
       unsubscribe = cleanup
     })

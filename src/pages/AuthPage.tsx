@@ -48,26 +48,24 @@ export function AuthPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-app px-4 py-8">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/80 p-6 shadow-neon">
+      <div className="w-full max-w-md rounded-2xl border border-edge bg-card p-6 shadow-neon">
         <h1 className="text-3xl font-black text-brand-green">tuto</h1>
-        <p className="mt-1 text-xs uppercase tracking-[0.22em] text-slate-400">Halina&apos;t maTuto!</p>
+        <p className="mt-1 text-xs uppercase tracking-[0.22em] text-muted">Halina&apos;t maTuto!</p>
 
-        <div className="mt-5 grid grid-cols-2 rounded-xl border border-white/10 bg-slate-950 p-1">
+        <div className="mt-5 grid grid-cols-2 rounded-xl border border-edge bg-inset p-1">
           <button
             type="button"
             onClick={() => setMode('login')}
-            className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-              mode === 'login' ? 'bg-brand-blue/20 text-brand-blue' : 'text-slate-400'
-            }`}
+            className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${mode === 'login' ? 'bg-brand-blue/20 text-brand-blue' : 'text-muted'
+              }`}
           >
             Log In
           </button>
           <button
             type="button"
             onClick={() => setMode('signup')}
-            className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-              mode === 'signup' ? 'bg-brand-violet/20 text-brand-violet' : 'text-slate-400'
-            }`}
+            className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${mode === 'signup' ? 'bg-brand-violet/20 text-brand-violet' : 'text-muted'
+              }`}
           >
             Sign Up
           </button>
@@ -79,14 +77,14 @@ export function AuthPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-brand-blue"
+            className="w-full rounded-xl border border-edge bg-inset px-3 py-2 text-sm text-heading outline-none focus:border-brand-blue"
           />
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
-            className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-brand-blue"
+            className="w-full rounded-xl border border-edge bg-inset px-3 py-2 text-sm text-heading outline-none focus:border-brand-blue"
           />
           <button
             type="button"
@@ -96,7 +94,7 @@ export function AuthPage() {
           >
             {isSubmitting ? 'Please wait...' : mode === 'login' ? 'Log In' : 'Create Account'}
           </button>
-          <p className="rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-xs text-slate-300">
+          <p className="rounded-lg border border-edge bg-inset px-3 py-2 text-xs text-sub">
             {status || 'Use your Supabase account credentials to continue.'}
           </p>
         </div>

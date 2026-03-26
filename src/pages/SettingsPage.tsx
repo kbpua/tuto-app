@@ -17,10 +17,10 @@ function Row({
   onChange: (checked: boolean) => void
 }) {
   return (
-    <label className="flex cursor-pointer items-start justify-between gap-4 rounded-xl border border-white/10 bg-slate-900/60 p-4">
+    <label className="flex cursor-pointer items-start justify-between gap-4 rounded-xl border border-edge bg-card p-4">
       <div>
-        <p className="text-sm font-semibold text-slate-100">{title}</p>
-        <p className="mt-1 text-xs text-slate-400">{description}</p>
+        <p className="text-sm font-semibold text-heading">{title}</p>
+        <p className="mt-1 text-xs text-muted">{description}</p>
       </div>
       <input
         type="checkbox"
@@ -110,22 +110,22 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4">
-      <h1 className="text-2xl font-black text-slate-100">Settings</h1>
+      <h1 className="text-2xl font-black text-heading">Settings</h1>
 
-      <section className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/70 p-5">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">Experience</h2>
+      <section className="space-y-3 rounded-2xl border border-edge bg-card p-5">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-sub">Experience</h2>
 
         <div className="grid gap-3 md:grid-cols-2">
           <button
             type="button"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="flex items-start gap-3 rounded-xl border border-white/10 bg-slate-900/60 p-4 text-left transition hover:border-brand-blue/50 focus:outline-none focus:ring-2 focus:ring-brand-blue/60"
+            className="flex items-start gap-3 rounded-xl border border-edge bg-card p-4 text-left transition hover:border-brand-blue/50 focus:outline-none focus:ring-2 focus:ring-brand-blue/60"
           >
             <MoonStar className="mt-0.5 h-4 w-4 text-brand-blue" />
             <div>
-              <p className="text-sm font-semibold text-slate-100">Theme</p>
-              <p className="mt-1 text-xs text-slate-400">
-                Current mode: <span className="font-semibold capitalize text-slate-200">{theme}</span>
+              <p className="text-sm font-semibold text-heading">Theme</p>
+              <p className="mt-1 text-xs text-muted">
+                Current mode: <span className="font-semibold capitalize text-heading">{theme}</span>
               </p>
             </div>
           </button>
@@ -147,16 +147,16 @@ export function SettingsPage() {
       </section>
 
       <section className="space-y-3 rounded-2xl border border-brand-violet/25 bg-brand-violet/10 p-5">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">Cloud Sync (Supabase)</h2>
-        <p className="text-sm text-slate-300">
-          This lets you move your <span className="font-semibold text-slate-100">Decks + Cards</span> between this device and your Supabase account.
+        <h2 className="text-sm font-bold uppercase tracking-wider text-heading">Cloud Sync (Supabase)</h2>
+        <p className="text-sm text-sub">
+          This lets you move your <span className="font-semibold text-heading">Decks + Cards</span> between this device and your Supabase account.
         </p>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={backupToCloud}
             disabled={isSyncing}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-slate-900/60 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:border-brand-blue/50 focus:outline-none focus:ring-2 focus:ring-brand-blue/60 disabled:opacity-70"
+            className="inline-flex items-center gap-2 rounded-xl border border-edge bg-card px-3 py-2 text-sm font-semibold text-heading transition hover:border-brand-blue/50 focus:outline-none focus:ring-2 focus:ring-brand-blue/60 disabled:opacity-70"
           >
             <CloudUpload className="h-4 w-4 text-brand-blue" />
             Backup to Cloud
@@ -165,50 +165,50 @@ export function SettingsPage() {
             type="button"
             onClick={restoreFromCloud}
             disabled={isSyncing}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-slate-900/60 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:border-brand-green/50 focus:outline-none focus:ring-2 focus:ring-brand-green/60 disabled:opacity-70"
+            className="inline-flex items-center gap-2 rounded-xl border border-edge bg-card px-3 py-2 text-sm font-semibold text-heading transition hover:border-brand-green/50 focus:outline-none focus:ring-2 focus:ring-brand-green/60 disabled:opacity-70"
           >
             <Download className="h-4 w-4 text-brand-green" />
             Restore from Cloud
           </button>
         </div>
         {cloudStatus && (
-          <p className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-xs text-slate-200">
+          <p className="rounded-xl border border-edge bg-inset px-3 py-2 text-xs text-heading">
             {cloudStatus}
           </p>
         )}
-        <div className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-xs text-slate-300">
+        <div className="rounded-xl border border-edge bg-inset px-3 py-2 text-xs text-sub">
           <p>
-            Sync status: <span className="font-semibold capitalize text-slate-100">{lastStatus}</span> · Pending: <span className="font-semibold text-slate-100">{pendingCount}</span>
+            Sync status: <span className="font-semibold capitalize text-heading">{lastStatus}</span> · Pending: <span className="font-semibold text-heading">{pendingCount}</span>
           </p>
           {lastSyncedAt && (
-            <p className="mt-1 text-slate-400">Last synced: {new Date(lastSyncedAt).toLocaleString()}</p>
+            <p className="mt-1 text-muted">Last synced: {new Date(lastSyncedAt).toLocaleString()}</p>
           )}
           {lastError && (
-            <p className="mt-1 text-red-300">Last error: {lastError}</p>
+            <p className="mt-1 text-red-500">Last error: {lastError}</p>
           )}
           <button
             type="button"
             onClick={retryPendingSync}
             disabled={isSyncing || pendingCount === 0}
-            className="mt-2 rounded-lg border border-white/15 px-2.5 py-1.5 text-xs text-slate-200 disabled:opacity-50"
+            className="mt-2 rounded-lg border border-edge px-2.5 py-1.5 text-xs text-heading disabled:opacity-50"
           >
             Retry Pending Sync
           </button>
         </div>
-        <p className="text-xs text-slate-400">
-          Tip: Run <span className="font-semibold text-slate-300">Backup</span> once after you’re happy with your local decks, then you can restore on any device after logging in.
+        <p className="text-xs text-muted">
+          Tip: Run <span className="font-semibold text-heading">Backup</span> once after you're happy with your local decks, then you can restore on any device after logging in.
         </p>
       </section>
 
-      <section className="rounded-2xl border border-red-400/20 bg-red-500/5 p-5">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-red-200">Danger Zone</h2>
-        <p className="mt-2 text-sm text-red-100/80">
+      <section className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-red-500">Danger Zone</h2>
+        <p className="mt-2 text-sm text-sub">
           This action permanently clears all saved local progress for Tuto on this browser.
         </p>
         <button
           type="button"
           onClick={resetAllData}
-          className="mt-4 inline-flex items-center gap-2 rounded-xl border border-red-400/40 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-400/10 focus:outline-none focus:ring-2 focus:ring-red-400/60"
+          className="mt-4 inline-flex items-center gap-2 rounded-xl border border-red-500/40 px-3 py-2 text-sm font-semibold text-red-500 transition hover:bg-red-500/10 focus:outline-none focus:ring-2 focus:ring-red-500/60"
         >
           <RotateCcw className="h-4 w-4" />
           Reset All Data
@@ -216,15 +216,15 @@ export function SettingsPage() {
       </section>
 
       <section className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-xl border border-white/10 bg-slate-900/60 p-4 text-sm text-slate-300">
-          <p className="mb-2 flex items-center gap-2 font-semibold text-slate-100">
+        <div className="rounded-xl border border-edge bg-card p-4 text-sm text-sub">
+          <p className="mb-2 flex items-center gap-2 font-semibold text-heading">
             <Volume2 className="h-4 w-4 text-brand-green" />
             Audio
           </p>
           Sound integration is ready; interaction sounds can be added page-by-page.
         </div>
-        <div className="rounded-xl border border-white/10 bg-slate-900/60 p-4 text-sm text-slate-300">
-          <p className="mb-2 flex items-center gap-2 font-semibold text-slate-100">
+        <div className="rounded-xl border border-edge bg-card p-4 text-sm text-sub">
+          <p className="mb-2 flex items-center gap-2 font-semibold text-heading">
             <Flame className="h-4 w-4 text-brand-violet" />
             Streak Rules
           </p>

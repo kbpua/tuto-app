@@ -39,10 +39,10 @@ export function DashboardPage() {
   const avgAccuracy =
     studyHistory.length > 0 || averageAccuracy() > 0
       ? Math.round(
-          (studyHistory.reduce((acc, s) => acc + s.accuracy, 0) +
-            averageAccuracy() * (averageAccuracy() > 0 ? 1 : 0)) /
-            (studyHistory.length + (averageAccuracy() > 0 ? 1 : 0)),
-        )
+        (studyHistory.reduce((acc, s) => acc + s.accuracy, 0) +
+          averageAccuracy() * (averageAccuracy() > 0 ? 1 : 0)) /
+        (studyHistory.length + (averageAccuracy() > 0 ? 1 : 0)),
+      )
       : 0
   const studyTimeMinutes = Math.floor(studySecondsToday / 60)
   const trend = recentAccuracyTrend(7)
@@ -53,8 +53,8 @@ export function DashboardPage() {
       {!hasAnyProgress && (
         <section className="rounded-2xl border border-brand-blue/30 bg-brand-blue/10 p-5">
           <p className="text-sm font-semibold text-brand-blue">Welcome to tuto</p>
-          <h2 className="mt-1 text-2xl font-black text-slate-100">Ready for your first streak?</h2>
-          <p className="mt-2 text-sm text-slate-300">
+          <h2 className="mt-1 text-2xl font-black text-heading">Ready for your first streak?</h2>
+          <p className="mt-2 text-sm text-sub">
             Create a deck, add a few cards, then run a quick study sprint to start building momentum.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -68,7 +68,7 @@ export function DashboardPage() {
             <button
               type="button"
               onClick={() => navigate('/study')}
-              className="rounded-xl border border-white/15 px-4 py-2 text-sm text-slate-300 hover:bg-white/5"
+              className="rounded-xl border border-edge px-4 py-2 text-sm text-sub hover:bg-heading/5"
             >
               Explore study mode
             </button>
@@ -80,12 +80,12 @@ export function DashboardPage() {
       <section className="grid gap-4 lg:grid-cols-3">
         <StreakCounter streak={streak} />
         <XPBar current={current} max={max} level={level} />
-        <article className="rounded-2xl border border-white/10 bg-slate-900/70 p-5">
-          <p className="text-xs uppercase tracking-widest text-slate-400">Upcoming Reviews</p>
-          <p className={`mt-2 text-3xl font-black ${totalDue > 0 ? 'text-brand-green' : 'text-slate-400'}`}>
+        <article className="rounded-2xl border border-edge bg-card p-5">
+          <p className="text-xs uppercase tracking-widest text-muted">Upcoming Reviews</p>
+          <p className={`mt-2 text-3xl font-black ${totalDue > 0 ? 'text-brand-green' : 'text-muted'}`}>
             {totalDue}
           </p>
-          <p className="mt-1 text-sm text-slate-300">
+          <p className="mt-1 text-sm text-sub">
             {totalDue > 0 ? 'cards in your SRS queue' : 'All caught up!  🎉'}
           </p>
         </article>
@@ -95,14 +95,14 @@ export function DashboardPage() {
       {continueDeck && (
         <section className="rounded-2xl border border-brand-blue/30 bg-brand-blue/10 p-5">
           <p className="text-sm font-semibold text-brand-blue">Continue Studying</p>
-          <h2 className="mt-1 text-2xl font-black text-slate-100">{continueDeck.title}</h2>
-          <div className="mt-3 h-2 rounded-full bg-slate-800">
+          <h2 className="mt-1 text-2xl font-black text-heading">{continueDeck.title}</h2>
+          <div className="mt-3 h-2 rounded-full bg-rail">
             <div
               className="h-full rounded-full bg-brand-blue"
               style={{ width: `${getMastery(continueDeck.id)}%` }}
             />
           </div>
-          <div className="mt-2 flex items-center justify-between text-sm text-slate-300">
+          <div className="mt-2 flex items-center justify-between text-sm text-sub">
             <span>{getMastery(continueDeck.id)}% mastered · {getDueCount(continueDeck.id)} cards due</span>
             <button
               type="button"
@@ -117,25 +117,25 @@ export function DashboardPage() {
       )}
 
       {/* Quick stats */}
-      <section className="grid gap-4 md:grid-cols-3">
-        <article className="rounded-2xl border border-white/10 bg-slate-900/70 p-5">
-          <p className="text-xs uppercase tracking-widest text-slate-400">Total Decks</p>
-          <p className="mt-2 text-3xl font-black text-slate-100">{decks.length}</p>
-          <p className="mt-1 text-sm text-slate-400">
+      <section className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+        <article className="rounded-2xl border border-edge bg-card p-5">
+          <p className="text-xs uppercase tracking-widest text-muted">Total Decks</p>
+          <p className="mt-2 text-3xl font-black text-heading">{decks.length}</p>
+          <p className="mt-1 text-sm text-muted">
             {decks.reduce((acc, d) => acc + d.cards.length, 0)} total cards
           </p>
         </article>
-        <article className="rounded-2xl border border-white/10 bg-slate-900/70 p-5">
-          <p className="text-xs uppercase tracking-widest text-slate-400">Avg. Accuracy</p>
+        <article className="rounded-2xl border border-edge bg-card p-5">
+          <p className="text-xs uppercase tracking-widest text-muted">Avg. Accuracy</p>
           <p className="mt-2 text-3xl font-black text-brand-green">{avgAccuracy}%</p>
-          <p className="mt-1 text-sm text-slate-400">study + quiz attempts</p>
+          <p className="mt-1 text-sm text-muted">study + quiz attempts</p>
         </article>
-        <article className="rounded-2xl border border-white/10 bg-slate-900/70 p-5">
-          <p className="text-xs uppercase tracking-widest text-slate-400">Study Time</p>
+        <article className="rounded-2xl border border-edge bg-card p-5">
+          <p className="text-xs uppercase tracking-widest text-muted">Study Time</p>
           <p className="mt-2 flex items-center gap-2 text-3xl font-black text-brand-violet">
             <Clock3 className="h-6 w-6" />{studyTimeMinutes}m
           </p>
-          <p className="mt-1 text-sm text-slate-400">today</p>
+          <p className="mt-1 text-sm text-muted">today</p>
         </article>
       </section>
 
@@ -143,22 +143,22 @@ export function DashboardPage() {
       <ActivityHeatmap values={heatmapData} />
 
       {/* XP stats */}
-      <section className="rounded-2xl border border-white/10 bg-slate-900/70 p-5">
-        <p className="mb-2 flex items-center gap-2 text-slate-200">
+      <section className="rounded-2xl border border-edge bg-card p-5">
+        <p className="mb-2 flex items-center gap-2 text-heading">
           <Zap className="h-4 w-4 text-brand-green" /> Total XP Earned
         </p>
         <p className="text-3xl font-black text-brand-green">{totalXp.toLocaleString()} XP</p>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-muted">
           Level {level} · {max - current} XP to next level
         </p>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-slate-900/70 p-5">
-        <p className="mb-3 text-xs uppercase tracking-widest text-slate-400">
+      <section className="rounded-2xl border border-edge bg-card p-5">
+        <p className="mb-3 text-xs uppercase tracking-widest text-muted">
           Quiz Accuracy Trend
         </p>
         {trend.length === 0 ? (
-          <p className="text-sm text-slate-500">No quiz attempts yet. Complete a quiz to start the trend.</p>
+          <p className="text-sm text-dim">No quiz attempts yet. Complete a quiz to start the trend.</p>
         ) : (
           <div className="flex items-end gap-2">
             {trend.map((value, idx) => (
@@ -167,7 +167,7 @@ export function DashboardPage() {
                   className="w-full rounded-sm bg-gradient-to-t from-brand-violet to-brand-green"
                   style={{ height: `${Math.max(10, value)}px` }}
                 />
-                <span className="text-[10px] text-slate-500">{value}%</span>
+                <span className="text-[10px] text-dim">{value}%</span>
               </div>
             ))}
           </div>

@@ -14,15 +14,15 @@ type SessionSummaryProps = {
 }
 
 const RATING_COLORS: Record<ConfidenceRating, string> = {
-  again: 'text-red-400',
-  hard: 'text-orange-400',
+  again: 'text-red-500',
+  hard: 'text-orange-500',
   good: 'text-brand-blue',
   easy: 'text-brand-green',
 }
 
 const RATING_BG: Record<ConfidenceRating, string> = {
-  again: 'bg-red-400/15 border-red-400/30',
-  hard: 'bg-orange-400/15 border-orange-400/30',
+  again: 'bg-red-500/15 border-red-500/30',
+  hard: 'bg-orange-500/15 border-orange-500/30',
   good: 'bg-brand-blue/15 border-brand-blue/30',
   easy: 'bg-brand-green/15 border-brand-green/30',
 }
@@ -52,8 +52,8 @@ export function SessionSummary({ deckTitle, results, sessionXP, onRestart }: Ses
       {/* Hero */}
       <div className="rounded-3xl border border-brand-green/40 bg-brand-green/10 p-6 text-center">
         <Trophy className="mx-auto mb-3 h-12 w-12 text-brand-green" />
-        <h2 className="text-2xl font-black text-slate-100">Session Complete!</h2>
-        <p className="mt-1 text-slate-300">{deckTitle}</p>
+        <h2 className="text-2xl font-black text-heading">Session Complete!</h2>
+        <p className="mt-1 text-sub">{deckTitle}</p>
       </div>
 
       {/* XP earned */}
@@ -61,7 +61,7 @@ export function SessionSummary({ deckTitle, results, sessionXP, onRestart }: Ses
         <p className="text-xs uppercase tracking-widest text-brand-violet">XP Earned</p>
         <p className="mt-1 text-4xl font-black text-brand-violet">+{sessionXP}</p>
         {multiplier > 1 && (
-          <p className="mt-1 flex items-center justify-center gap-1 text-sm text-slate-400">
+          <p className="mt-1 flex items-center justify-center gap-1 text-sm text-muted">
             <Zap className="h-3 w-3 text-brand-green" />
             {multiplier}× streak bonus applied
           </p>
@@ -70,28 +70,28 @@ export function SessionSummary({ deckTitle, results, sessionXP, onRestart }: Ses
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center">
-          <p className="text-2xl font-black text-slate-100">{results.length}</p>
-          <p className="text-xs text-slate-400">Cards reviewed</p>
+        <div className="rounded-2xl border border-edge bg-card p-4 text-center">
+          <p className="text-2xl font-black text-heading">{results.length}</p>
+          <p className="text-xs text-muted">Cards reviewed</p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center">
+        <div className="rounded-2xl border border-edge bg-card p-4 text-center">
           <p className="text-2xl font-black text-brand-green">{accuracy}%</p>
-          <p className="text-xs text-slate-400">Accuracy</p>
+          <p className="text-xs text-muted">Accuracy</p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center">
+        <div className="rounded-2xl border border-edge bg-card p-4 text-center">
           <p className="text-2xl font-black text-brand-blue">Lv.{level}</p>
-          <p className="text-xs text-slate-400">{current}/{max} XP</p>
+          <p className="text-xs text-muted">{current}/{max} XP</p>
         </div>
       </div>
 
       {/* Rating breakdown */}
-      <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-5">
-        <p className="mb-3 text-xs uppercase tracking-widest text-slate-400">Breakdown</p>
+      <div className="rounded-2xl border border-edge bg-card p-5">
+        <p className="mb-3 text-xs uppercase tracking-widest text-muted">Breakdown</p>
         <div className="grid grid-cols-2 gap-2">
           {(['again', 'hard', 'good', 'easy'] as ConfidenceRating[]).map((r) => (
             <div key={r} className={`rounded-xl border px-4 py-3 text-center ${RATING_BG[r]}`}>
               <p className={`text-lg font-black ${RATING_COLORS[r]}`}>{counts[r] ?? 0}</p>
-              <p className="text-xs capitalize text-slate-400">{r}</p>
+              <p className="text-xs capitalize text-muted">{r}</p>
             </div>
           ))}
         </div>
@@ -99,7 +99,7 @@ export function SessionSummary({ deckTitle, results, sessionXP, onRestart }: Ses
 
       {/* Actions */}
       <div className="flex gap-3">
-        <button onClick={onRestart} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/15 py-3 text-sm text-slate-300 hover:bg-white/5">
+        <button onClick={onRestart} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-edge py-3 text-sm text-sub hover:bg-heading/5">
           <RotateCcw className="h-4 w-4" /> Study Again
         </button>
         <button onClick={() => navigate('/')} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-green py-3 text-sm font-bold text-slate-950">

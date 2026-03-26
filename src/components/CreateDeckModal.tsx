@@ -52,11 +52,11 @@ export function CreateDeckModal({ onClose, onCreated }: CreateDeckModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-slate-950 p-6 shadow-neon">
+      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-edge bg-inset p-6 shadow-neon">
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-xl font-black text-slate-100">Create New Deck</h2>
-          <button type="button" onClick={onClose} className="rounded-xl border border-white/10 p-2 text-slate-400 hover:text-slate-100">
+          <h2 className="text-xl font-black text-heading">Create New Deck</h2>
+          <button type="button" onClick={onClose} className="rounded-xl border border-edge p-2 text-muted hover:text-heading">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -65,35 +65,35 @@ export function CreateDeckModal({ onClose, onCreated }: CreateDeckModalProps) {
           {/* Deck info */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs uppercase tracking-widest text-slate-400">Deck Title</label>
+              <label className="mb-1 block text-xs uppercase tracking-widest text-muted">Deck Title</label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Calculus II Derivatives"
-                className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-slate-100 outline-none focus:border-brand-blue"
+                className="w-full rounded-xl border border-edge bg-card px-4 py-3 text-sm text-heading outline-none focus:border-brand-blue"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-xs uppercase tracking-widest text-slate-400">Folder</label>
+              <label className="mb-1 block text-xs uppercase tracking-widest text-muted">Folder</label>
               <select
                 value={folder}
                 onChange={(e) => setFolder(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-slate-100 outline-none focus:border-brand-blue"
+                className="w-full rounded-xl border border-edge bg-card px-4 py-3 text-sm text-heading outline-none focus:border-brand-blue"
               >
                 {FOLDERS.map((f) => <option key={f}>{f}</option>)}
               </select>
             </div>
 
             <div>
-              <label className="mb-1 block text-xs uppercase tracking-widest text-slate-400">Tags</label>
+              <label className="mb-1 block text-xs uppercase tracking-widest text-muted">Tags</label>
               <div className="flex gap-2">
                 <input
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag() } }}
                   placeholder="Add tag + Enter"
-                  className="flex-1 rounded-xl border border-white/10 bg-slate-900 px-3 py-3 text-sm text-slate-100 outline-none focus:border-brand-blue"
+                  className="flex-1 rounded-xl border border-edge bg-card px-3 py-3 text-sm text-heading outline-none focus:border-brand-blue"
                 />
                 <button type="button" onClick={addTag} className="rounded-xl bg-brand-violet/20 px-3 text-brand-violet hover:bg-brand-violet/30">
                   <Plus className="h-4 w-4" />
@@ -115,7 +115,7 @@ export function CreateDeckModal({ onClose, onCreated }: CreateDeckModalProps) {
           {/* Cards */}
           <div>
             <div className="mb-3 flex items-center justify-between">
-              <label className="text-xs uppercase tracking-widest text-slate-400">Cards</label>
+              <label className="text-xs uppercase tracking-widest text-muted">Cards</label>
               <button type="button" onClick={addCardRow} className="inline-flex items-center gap-1 rounded-lg bg-brand-green/10 px-3 py-1 text-xs font-semibold text-brand-green hover:bg-brand-green/20">
                 <Plus className="h-3 w-3" /> Add Card
               </button>
@@ -127,15 +127,15 @@ export function CreateDeckModal({ onClose, onCreated }: CreateDeckModalProps) {
                     value={card.front}
                     onChange={(e) => updateCard(idx, 'front', e.target.value)}
                     placeholder="Front (question)"
-                    className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-brand-blue"
+                    className="rounded-xl border border-edge bg-card px-3 py-2 text-sm text-heading outline-none focus:border-brand-blue"
                   />
                   <input
                     value={card.back}
                     onChange={(e) => updateCard(idx, 'back', e.target.value)}
                     placeholder="Back (answer)"
-                    className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-brand-blue"
+                    className="rounded-xl border border-edge bg-card px-3 py-2 text-sm text-heading outline-none focus:border-brand-blue"
                   />
-                  <button type="button" onClick={() => removeCard(idx)} disabled={cards.length === 1} className="mt-2 text-slate-500 hover:text-red-400 disabled:opacity-30">
+                  <button type="button" onClick={() => removeCard(idx)} disabled={cards.length === 1} className="mt-2 text-dim hover:text-red-500 disabled:opacity-30">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -143,10 +143,10 @@ export function CreateDeckModal({ onClose, onCreated }: CreateDeckModalProps) {
             </div>
           </div>
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-red-500">{error}</p>}
 
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-white/10 py-3 text-sm text-slate-300 hover:bg-white/5">
+            <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-edge py-3 text-sm text-sub hover:bg-heading/5">
               Cancel
             </button>
             <button type="submit" className="flex-1 rounded-xl bg-brand-green py-3 text-sm font-bold text-slate-950">

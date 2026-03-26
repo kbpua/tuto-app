@@ -48,19 +48,18 @@ export function DecksPage() {
 
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
         {/* Sidebar */}
-        <aside className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Folders</h2>
+        <aside className="rounded-2xl border border-edge bg-card p-4">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">Folders</h2>
           <div className="space-y-1">
             {allFolders.map((folder) => (
               <button
                 key={folder}
                 type="button"
                 onClick={() => setActiveFolder(folder)}
-                className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
-                  activeFolder === folder
+                className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${activeFolder === folder
                     ? 'bg-brand-violet/20 font-semibold text-brand-violet'
-                    : 'text-slate-300 hover:bg-white/5'
-                }`}
+                    : 'text-sub hover:bg-heading/5'
+                  }`}
               >
                 {folder}
               </button>
@@ -72,19 +71,19 @@ export function DecksPage() {
         <section className="space-y-4">
           {/* Toolbar */}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-2xl font-black text-slate-100">Deck Library</h1>
+            <h1 className="text-2xl font-black text-heading">Deck Library</h1>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setIsGrid(true)}
-                className={`rounded-lg border p-2 ${isGrid ? 'border-brand-blue text-brand-blue' : 'border-white/15 text-slate-400'}`}
+                className={`rounded-lg border p-2 ${isGrid ? 'border-brand-blue text-brand-blue' : 'border-edge text-muted'}`}
               >
                 <Grid2x2 className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setIsGrid(false)}
-                className={`rounded-lg border p-2 ${!isGrid ? 'border-brand-blue text-brand-blue' : 'border-white/15 text-slate-400'}`}
+                className={`rounded-lg border p-2 ${!isGrid ? 'border-brand-blue text-brand-blue' : 'border-edge text-muted'}`}
               >
                 <List className="h-4 w-4" />
               </button>
@@ -100,7 +99,7 @@ export function DecksPage() {
 
           {/* Deck grid/list */}
           {visibleDecks.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/20 py-16 text-center text-slate-400">
+            <div className="rounded-2xl border border-dashed border-edge py-16 text-center text-muted">
               <p>No decks in this folder yet.</p>
               <button
                 type="button"
@@ -119,14 +118,14 @@ export function DecksPage() {
                 return (
                   <article
                     key={deck.id}
-                    className="group relative rounded-2xl border border-white/10 bg-slate-900/80 p-5 transition hover:-translate-y-0.5 hover:border-brand-blue/50"
+                    className="group relative rounded-2xl border border-edge bg-card p-5 transition hover:-translate-y-0.5 hover:border-brand-blue/50"
                   >
                     {/* Delete button */}
                     {confirmDelete === deck.id ? (
-                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-2xl bg-slate-950/90 p-4">
-                        <p className="text-sm text-slate-200">Delete <strong>{deck.title}</strong>?</p>
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-2xl bg-inset/90 p-4">
+                        <p className="text-sm text-heading">Delete <strong>{deck.title}</strong>?</p>
                         <div className="flex gap-2">
-                          <button onClick={() => setConfirmDelete(null)} className="rounded-lg border border-white/15 px-4 py-2 text-sm text-slate-300">Cancel</button>
+                          <button onClick={() => setConfirmDelete(null)} className="rounded-lg border border-edge px-4 py-2 text-sm text-sub">Cancel</button>
                           <button onClick={() => { deleteDeck(deck.id); setConfirmDelete(null) }} className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white">Delete</button>
                         </div>
                       </div>
@@ -134,7 +133,7 @@ export function DecksPage() {
                       <button
                         type="button"
                         onClick={() => setConfirmDelete(deck.id)}
-                        className="absolute right-4 top-4 opacity-0 text-slate-500 transition hover:text-red-400 group-hover:opacity-100"
+                        className="absolute right-4 top-4 opacity-0 text-dim transition hover:text-red-500 group-hover:opacity-100"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -142,18 +141,18 @@ export function DecksPage() {
 
                     {/* Content */}
                     <div className="mb-3 flex items-start justify-between gap-8 pr-6">
-                      <h3 className="text-base font-bold text-slate-100">{deck.title}</h3>
-                      <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${due > 0 ? 'bg-brand-green/20 text-brand-green' : 'bg-slate-800 text-slate-400'}`}>
+                      <h3 className="text-base font-bold text-heading">{deck.title}</h3>
+                      <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${due > 0 ? 'bg-brand-green/20 text-brand-green' : 'bg-rail text-muted'}`}>
                         {due > 0 ? `${due} due` : '✓ caught up'}
                       </span>
                     </div>
 
-                    <div className="space-y-1 text-xs text-slate-400">
+                    <div className="space-y-1 text-xs text-muted">
                       <p>{deck.cards.length} cards · {formatLastStudied(deck.lastStudied)} · {mastery}% mastered</p>
                       <p>Next review: {nextReviewLabel(deck.cards.find((c) => c.dueDate !== null)?.dueDate ?? null)}</p>
                     </div>
 
-                    <div className="my-3 h-1.5 rounded-full bg-slate-800">
+                    <div className="my-3 h-1.5 rounded-full bg-rail">
                       <div className="h-full rounded-full bg-gradient-to-r from-brand-violet to-brand-green" style={{ width: `${mastery}%` }} />
                     </div>
 
@@ -173,7 +172,7 @@ export function DecksPage() {
                     {deck.tags.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1">
                         {deck.tags.map((t) => (
-                          <span key={t} className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400">{t}</span>
+                          <span key={t} className="rounded-full bg-rail px-2 py-0.5 text-[11px] text-muted">{t}</span>
                         ))}
                       </div>
                     )}
@@ -184,8 +183,8 @@ export function DecksPage() {
           )}
 
           {/* Import sources */}
-          <section className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Import Sources</h2>
+          <section className="rounded-2xl border border-edge bg-card p-4">
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">Import Sources</h2>
             <div className="flex flex-wrap gap-2">
               {importSources.map((source) => (
                 <ImportSourceButton key={source} label={source} disabled />

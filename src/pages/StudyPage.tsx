@@ -11,8 +11,8 @@ import type { ConfidenceRating } from '../lib/sm2'
 // ── Confidence buttons ─────────────────────────────────────────────────────────
 
 const CONFIDENCE: { label: string; rating: ConfidenceRating; color: string }[] = [
-  { label: 'Again', rating: 'again', color: 'border-red-400/40 hover:bg-red-400/10 hover:border-red-400 text-red-300' },
-  { label: 'Hard', rating: 'hard', color: 'border-orange-400/40 hover:bg-orange-400/10 hover:border-orange-400 text-orange-300' },
+  { label: 'Again', rating: 'again', color: 'border-red-500/40 hover:bg-red-500/10 hover:border-red-500 text-red-500' },
+  { label: 'Hard', rating: 'hard', color: 'border-orange-500/40 hover:bg-orange-500/10 hover:border-orange-500 text-orange-500' },
   { label: 'Good', rating: 'good', color: 'border-brand-blue/40 hover:bg-brand-blue/10 hover:border-brand-blue text-brand-blue' },
   { label: 'Easy', rating: 'easy', color: 'border-brand-green/40 hover:bg-brand-green/10 hover:border-brand-green text-brand-green' },
 ]
@@ -29,7 +29,7 @@ function DeckPicker() {
     <div className="mx-auto w-full max-w-5xl space-y-5">
       <div className="flex items-center gap-3">
         <BrainCircuit className="h-6 w-6 text-brand-blue" />
-        <h1 className="text-2xl font-black text-slate-100">Pick a Deck to Study</h1>
+        <h1 className="text-2xl font-black text-heading">Pick a Deck to Study</h1>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -41,19 +41,19 @@ function DeckPicker() {
               key={deck.id}
               type="button"
               onClick={() => navigate(`/study/${deck.id}`)}
-              className="group rounded-2xl border border-white/10 bg-slate-900/70 p-5 text-left transition hover:-translate-y-0.5 hover:border-brand-blue/50"
+              className="group rounded-2xl border border-edge bg-card p-5 text-left transition hover:-translate-y-0.5 hover:border-brand-blue/50"
             >
               <div className="mb-3 flex items-start justify-between gap-3">
-                <h3 className="text-base font-bold text-slate-100 group-hover:text-brand-blue">{deck.title}</h3>
-                <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${due > 0 ? 'bg-brand-green/20 text-brand-green' : 'bg-slate-800 text-slate-400'}`}>
+                <h3 className="text-base font-bold text-heading group-hover:text-brand-blue">{deck.title}</h3>
+                <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${due > 0 ? 'bg-brand-green/20 text-brand-green' : 'bg-rail text-muted'}`}>
                   {due > 0 ? `${due} due` : 'All caught up'}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-sm text-slate-400">
+              <div className="flex items-center justify-between text-sm text-muted">
                 <span className="flex items-center gap-1.5"><Layers className="h-3.5 w-3.5" />{deck.cards.length} cards</span>
                 <span>{mastery}% mastered</span>
               </div>
-              <div className="mt-3 h-1.5 rounded-full bg-slate-800">
+              <div className="mt-3 h-1.5 rounded-full bg-rail">
                 <div className="h-full rounded-full bg-brand-violet" style={{ width: `${mastery}%` }} />
               </div>
             </button>
@@ -140,7 +140,7 @@ function StudySession({ deckId }: { deckId: string }) {
 
   if (!deck) {
     return (
-      <div className="py-10 text-center text-slate-400">
+      <div className="py-10 text-center text-muted">
         Deck not found.{' '}
         <button onClick={() => navigate('/study')} className="text-brand-blue underline">Go back</button>
       </div>
@@ -167,14 +167,14 @@ function StudySession({ deckId }: { deckId: string }) {
         <div>
           <button
             onClick={() => navigate('/study')}
-            className="mb-1 flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/60"
+            className="mb-1 flex items-center gap-1 text-xs text-muted hover:text-heading focus:outline-none focus:ring-2 focus:ring-brand-blue/60"
           >
             ← All Decks
           </button>
-          <h1 className="text-xl font-black text-slate-100">{deck.title}</h1>
+          <h1 className="text-xl font-black text-heading">{deck.title}</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="rounded-xl border border-white/15 bg-slate-900 px-3 py-2 text-xs text-slate-300">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="rounded-xl border border-edge bg-card px-3 py-2 text-xs text-sub">
             <span className="inline-flex items-center gap-1">
               <Clock3 className="h-3.5 w-3.5 text-brand-green" />
               {minutes}:{seconds.toString().padStart(2, '0')}
@@ -183,7 +183,7 @@ function StudySession({ deckId }: { deckId: string }) {
           <button
             type="button"
             onClick={togglePause}
-            className="inline-flex items-center gap-1 rounded-xl border border-white/15 bg-slate-900 px-3 py-2 text-xs text-slate-300 hover:border-brand-blue/50 focus:outline-none focus:ring-2 focus:ring-brand-blue/60"
+            className="inline-flex items-center gap-1 rounded-xl border border-edge bg-card px-3 py-2 text-xs text-sub hover:border-brand-blue/50 focus:outline-none focus:ring-2 focus:ring-brand-blue/60"
             aria-pressed={isPaused}
             aria-label={isPaused ? 'Resume timer' : 'Pause timer'}
           >
@@ -198,14 +198,14 @@ function StudySession({ deckId }: { deckId: string }) {
 
       {/* Progress */}
       <div className="space-y-1">
-        <div className="h-2 rounded-full bg-slate-800">
+        <div className="h-2 rounded-full bg-rail">
           <motion.div
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.4 }}
             className="h-full rounded-full bg-gradient-to-r from-brand-blue to-brand-green"
           />
         </div>
-        <p className="text-right text-xs text-slate-400">{currentIndex + 1} / {queue.length}</p>
+        <p className="text-right text-xs text-muted">{currentIndex + 1} / {queue.length}</p>
       </div>
 
       {/* Card */}
@@ -228,7 +228,7 @@ function StudySession({ deckId }: { deckId: string }) {
 
       {/* Tap hint */}
       {!flipped && (
-        <p className="text-center text-xs text-slate-500">Tap the card to reveal the answer</p>
+        <p className="text-center text-xs text-dim">Tap the card to reveal the answer</p>
       )}
 
       {/* Confidence buttons — only visible after flip */}
@@ -245,7 +245,7 @@ function StudySession({ deckId }: { deckId: string }) {
                 key={rating}
                 type="button"
                 onClick={() => rate(rating)}
-                className={`rounded-xl border bg-slate-900/80 px-4 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-brand-blue/60 ${color}`}
+                className={`rounded-xl border bg-card px-4 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-brand-blue/60 ${color}`}
               >
                 {label}
               </button>
@@ -254,9 +254,9 @@ function StudySession({ deckId }: { deckId: string }) {
         )}
       </AnimatePresence>
 
-      <section className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
+      <section className="rounded-2xl border border-edge bg-card p-4">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs uppercase tracking-widest text-slate-400">
+          <p className="text-xs uppercase tracking-widest text-muted">
             Add card while studying
           </p>
           <button
@@ -274,13 +274,13 @@ function StudySession({ deckId }: { deckId: string }) {
               value={newFront}
               onChange={(e) => setNewFront(e.target.value)}
               placeholder="Front (question)"
-              className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-brand-blue"
+              className="rounded-xl border border-edge bg-inset px-3 py-2 text-sm text-heading outline-none focus:border-brand-blue"
             />
             <input
               value={newBack}
               onChange={(e) => setNewBack(e.target.value)}
               placeholder="Back (answer)"
-              className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-brand-blue"
+              className="rounded-xl border border-edge bg-inset px-3 py-2 text-sm text-heading outline-none focus:border-brand-blue"
             />
             <button
               type="button"
@@ -294,11 +294,11 @@ function StudySession({ deckId }: { deckId: string }) {
       </section>
 
       {/* Keyboard hint */}
-      <p className="text-center text-xs text-slate-600">
-        <kbd className="rounded bg-slate-800 px-1.5 py-0.5">Space</kbd> flip ·{' '}
-        <kbd className="rounded bg-slate-800 px-1.5 py-0.5">1</kbd>–
-        <kbd className="rounded bg-slate-800 px-1.5 py-0.5">4</kbd> rate
-        {' '}· <kbd className="rounded bg-slate-800 px-1.5 py-0.5">P</kbd> pause
+      <p className="text-center text-xs text-dim">
+        <kbd className="rounded bg-rail px-1.5 py-0.5">Space</kbd> flip ·{' '}
+        <kbd className="rounded bg-rail px-1.5 py-0.5">1</kbd>–
+        <kbd className="rounded bg-rail px-1.5 py-0.5">4</kbd> rate
+        {' '}· <kbd className="rounded bg-rail px-1.5 py-0.5">P</kbd> pause
       </p>
     </div>
   )
