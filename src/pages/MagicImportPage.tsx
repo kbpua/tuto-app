@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, Wand2, Save, Trash2, Plus, BrainCircuit, FileUp } from 'lucide-react'
+import { Zap, Wand2, Save, Trash2, Plus, BrainCircuit, FileUp } from 'lucide-react'
 import { useDecksStore } from '../store/useDecksStore'
 
 type AICard = {
@@ -304,9 +304,9 @@ export function MagicImportPage() {
     <div className="mx-auto w-full max-w-5xl space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Sparkles className="h-6 w-6 text-brand-blue" />
+          <Zap className="h-6 w-6 text-brand-blue" />
           <div>
-            <h1 className="text-2xl font-black text-heading">Magic Import</h1>
+            <h1 className="text-2xl font-black text-heading">Flash Import</h1>
             <p className="text-sm text-muted">Paste notes → generate flashcards + quizzes → review → save.</p>
           </div>
         </div>
