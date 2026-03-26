@@ -53,9 +53,9 @@ function yesterdayString(): string {
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      totalXp: 1840,
-      streak: 14,
-      lastStudiedDate: yesterdayString(), // makes streak update on first session
+      totalXp: 0,
+      streak: 0,
+      lastStudiedDate: null,
       studySecondsToday: 0,
       studySecondsDate: todayString(),
       studyHistory: [],

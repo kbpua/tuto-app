@@ -13,6 +13,7 @@ export type QuizAttempt = {
 
 type QuizState = {
   attempts: QuizAttempt[]
+  resetAttempts: () => void
   recordAttempt: (attempt: Omit<QuizAttempt, 'id' | 'date'>) => void
   hydrateAttemptsFromCloud: () => Promise<void>
   averageAccuracy: () => number
@@ -27,6 +28,10 @@ export const useQuizStore = create<QuizState>()(
   persist(
     (set, get) => ({
       attempts: [],
+
+      resetAttempts() {
+        set({ attempts: [] })
+      },
 
       recordAttempt(attempt) {
         set((s) => ({

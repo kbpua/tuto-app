@@ -36,6 +36,7 @@ export type Deck = {
 
 type DecksState = {
   decks: Deck[]
+  resetLocalDecks: () => void
   createDeck: (title: string, folder: string, tags: string[]) => string
   deleteDeck: (deckId: string) => void
   addCard: (deckId: string, front: string, back: string) => Card
@@ -50,96 +51,16 @@ type DecksState = {
   restoreDecksFromCloud: (opts?: { overwriteLocalIfCloudEmpty?: boolean }) => Promise<{ decks: number; cards: number }>
 }
 
-// ── Seed data ─────────────────────────────────────────────────────────────────
-
-const seed = (id: string, front: string, back: string): Card => ({
-  id,
-  front,
-  back,
-  ...DEFAULT_SM2,
-})
-
-const SEED_DECKS: Deck[] = [
-  {
-    id: 'deck-physics',
-    title: 'AP Physics: Motion & Forces',
-    folder: 'Science',
-    tags: ['Physics', 'AP'],
-    createdAt: new Date().toISOString(),
-    lastStudied: null,
-    cards: [
-      seed('phy-1', "What is Newton's First Law?", 'An object stays at rest or in uniform motion unless acted upon by a net force.'),
-      seed('phy-2', "What is Newton's Second Law?", 'F = ma — force equals mass times acceleration.'),
-      seed('phy-3', "What is Newton's Third Law?", 'For every action there is an equal and opposite reaction.'),
-      seed('phy-4', 'Define momentum.', 'p = mv — mass multiplied by velocity.'),
-      seed('phy-5', 'What is kinetic energy?', 'KE = ½mv² — energy an object has due to its motion.'),
-      seed('phy-6', 'What is gravitational potential energy?', 'PE = mgh — energy stored due to height above a reference point.'),
-      seed('phy-7', 'Define velocity.', 'Speed with direction — a vector quantity measured in m/s.'),
-      seed('phy-8', 'Define acceleration.', 'The rate of change of velocity over time (m/s²).'),
-      seed('phy-9', 'What is work in physics?', 'W = Fd — force applied over a distance.'),
-      seed('phy-10', 'State the law of conservation of energy.', 'Energy cannot be created or destroyed, only converted between forms.'),
-    ],
-  },
-  {
-    id: 'deck-chem',
-    title: 'Organic Chemistry Reactions',
-    folder: 'Science',
-    tags: ['Chemistry', 'Finals'],
-    createdAt: new Date().toISOString(),
-    lastStudied: null,
-    cards: [
-      seed('chem-1', 'What is an alkene?', 'A hydrocarbon containing one or more carbon–carbon double bonds.'),
-      seed('chem-2', 'What is a nucleophile?', 'An electron-rich species that donates electrons to an electrophile.'),
-      seed('chem-3', 'What is SN2?', 'Bimolecular nucleophilic substitution with inversion of configuration (Walden inversion).'),
-      seed('chem-4', 'What is SN1?', 'Unimolecular nucleophilic substitution proceeding through a carbocation intermediate.'),
-      seed('chem-5', "What is Markovnikov's rule?", 'In electrophilic addition, the nucleophile adds to the more substituted carbon atom.'),
-      seed('chem-6', 'Define oxidation in organic chemistry.', 'Loss of electrons, gain of oxygen, or loss of hydrogen.'),
-      seed('chem-7', 'What is a chiral center?', 'A carbon atom bonded to four different substituents.'),
-      seed('chem-8', 'What are enantiomers?', 'Non-superimposable mirror images of a chiral molecule.'),
-    ],
-  },
-  {
-    id: 'deck-japanese',
-    title: 'Japanese N4 Vocabulary',
-    folder: 'Languages',
-    tags: ['Japanese', 'Vocabulary'],
-    createdAt: new Date().toISOString(),
-    lastStudied: null,
-    cards: [
-      seed('jp-1', '食べる (taberu)', 'To eat'),
-      seed('jp-2', '飲む (nomu)', 'To drink'),
-      seed('jp-3', '行く (iku)', 'To go'),
-      seed('jp-4', '来る (kuru)', 'To come'),
-      seed('jp-5', '見る (miru)', 'To see / to watch'),
-      seed('jp-6', '聞く (kiku)', 'To hear / to listen'),
-      seed('jp-7', '話す (hanasu)', 'To speak / to talk'),
-      seed('jp-8', '読む (yomu)', 'To read'),
-    ],
-  },
-  {
-    id: 'deck-history',
-    title: 'World War II Key Events',
-    folder: 'Humanities',
-    tags: ['History', 'Essay Prep'],
-    createdAt: new Date().toISOString(),
-    lastStudied: null,
-    cards: [
-      seed('ww2-1', 'When did World War II begin?', 'September 1, 1939, when Germany invaded Poland.'),
-      seed('ww2-2', 'What was the significance of D-Day?', 'June 6, 1944 — Allied forces landed in Normandy, opening the Western Front.'),
-      seed('ww2-3', 'What was Operation Barbarossa?', "Germany's invasion of the Soviet Union, launched June 22, 1941."),
-      seed('ww2-4', 'When did Japan attack Pearl Harbor?', 'December 7, 1941 — bringing the USA into the war.'),
-      seed('ww2-5', 'What ended the war in the Pacific?', "The atomic bombings of Hiroshima (Aug 6) and Nagasaki (Aug 9, 1945) and Japan's surrender."),
-      seed('ww2-6', 'What was the Holocaust?', 'The systematic genocide of six million Jews and millions of others by the Nazi regime.'),
-    ],
-  },
-]
-
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 export const useDecksStore = create<DecksState>()(
   persist(
     (set, get) => ({
-      decks: SEED_DECKS,
+      decks: [],
+
+      resetLocalDecks() {
+        set({ decks: [] })
+      },
 
       createDeck(title, folder, tags) {
         const id = crypto.randomUUID()
