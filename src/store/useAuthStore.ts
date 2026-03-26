@@ -5,15 +5,21 @@ import { supabase } from '../lib/supabase'
 type AuthState = {
   session: Session | null
   user: User | null
+  isEmailVerified: boolean
   isLoading: boolean
   initialized: boolean
   initialize: () => Promise<() => void>
   signOut: () => Promise<string | null>
 }
 
+function isVerifiedUser(user: User | null | undefined): boolean {
+  return Boolean(user?.email_confirmed_at)
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   user: null,
+  isEmailVerified: false,
   isLoading: true,
   initialized: false,
 
@@ -24,20 +30,38 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const { data, error } = await supabase.auth.getSession()
     if (error) {
-      set({ session: null, user: null, isLoading: false, initialized: true })
-    } else {
       set({
-        session: data.session,
-        user: data.session?.user ?? null,
+        session: null,
+        user: null,
+        isEmailVerified: false,
+        isLoading: false,
+        initialized: true,
+      })
+    } else {
+      const user = data.session?.user ?? null
+      const verified = isVerifiedUser(user)
+      if (user && !verified) {
+        await supabase.auth.signOut()
+      }
+      set({
+        session: verified ? data.session : null,
+        user: verified ? user : null,
+        isEmailVerified: verified,
         isLoading: false,
         initialized: true,
       })
     }
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user ?? null
+      const verified = isVerifiedUser(user)
+      if (user && !verified) {
+        void supabase.auth.signOut()
+      }
       set({
-        session,
-        user: session?.user ?? null,
+        session: verified ? session : null,
+        user: verified ? user : null,
+        isEmailVerified: verified,
         isLoading: false,
       })
     })

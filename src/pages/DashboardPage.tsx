@@ -99,8 +99,8 @@ export function DashboardPage() {
 
       {/* Continue studying */}
       {continueDeck && (
-      <section className="rounded-2xl border border-brand-blue/30 bg-brand-blue/10 p-5">
-        <p className="text-sm font-semibold text-brand-blue">Continue Studying</p>
+        <section className="rounded-2xl border border-brand-blue/30 bg-brand-blue/10 p-5">
+          <p className="text-sm font-semibold text-brand-blue">Continue Studying</p>
           <h2 className="mt-1 text-2xl font-black text-heading">{continueDeck.title}</h2>
           <div className="mt-3 h-2 rounded-full bg-rail">
             <div
@@ -118,8 +118,8 @@ export function DashboardPage() {
             >
               <BrainCircuit className="h-3.5 w-3.5" /> Study Now
             </button>
-        </div>
-      </section>
+          </div>
+        </section>
       )}
 
       {/* Quick stats */}

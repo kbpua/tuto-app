@@ -103,6 +103,14 @@ function errorMessage(err: unknown): string {
   return String(err)
 }
 
+function readBodySafely(req: { body?: unknown }): { ok: true; body: unknown } | { ok: false; message: string } {
+  try {
+    return { ok: true, body: req.body }
+  } catch (err) {
+    return { ok: false, message: errorMessage(err) }
+  }
+}
+
 async function generateStructuredContent(params: {
   apiKey: string
   model: string
@@ -164,54 +172,53 @@ type ApiReq = {
 type ApiRes = { status: (code: number) => { json: (body: unknown) => void } }
 
 export default async function handler(req: ApiReq, res: ApiRes) {
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed. Use POST.' })
-    return
-  }
-
-  const limitResult = applyRateLimit({
-    key: getClientKey(req, 'magic-import'),
-    limit: 12,
-    windowMs: 60_000, // 12 requests / minute / IP
-  })
-  if (!limitResult.allowed) {
-    res.status(429).json({
-      error: 'Too many requests. Please wait before generating again.',
-      retryAfterSec: Math.ceil(limitResult.resetInMs / 1000),
-    })
-    return
-  }
-
-  const parsedInput = InputSchema.safeParse(req.body)
-  if (!parsedInput.success) {
-    res.status(400).json({
-      error: 'Invalid request payload.',
-      details: parsedInput.error.issues.map((i) => i.message),
-    })
-    return
-  }
-
-  const apiKey = process.env.GEMINI_API_KEY
-  const model = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash'
-
-  if (!apiKey) {
-    res.status(500).json({ error: 'Server is missing GEMINI_API_KEY.' })
-    return
-  }
-
-  const { sourceText, cardCount = 12, quizCount = 8 } = parsedInput.data
-
   try {
-    const data = await generateStructuredContent({
-      apiKey,
-      model,
-      sourceText,
-      cardCount,
-      quizCount,
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'Method not allowed. Use POST.' })
+      return
+    }
+
+    const limitResult = applyRateLimit({
+      key: getClientKey(req, 'magic-import'),
+      limit: 12,
+      windowMs: 60_000, // 12 requests / minute / IP
     })
-    res.status(200).json({ data })
-    return
-  } catch (firstError) {
+    if (!limitResult.allowed) {
+      res.status(429).json({
+        error: 'Too many requests. Please wait before generating again.',
+        retryAfterSec: Math.ceil(limitResult.resetInMs / 1000),
+      })
+      return
+    }
+
+    const bodyResult = readBodySafely(req)
+    if (!bodyResult.ok) {
+      res.status(400).json({
+        error: 'Invalid JSON body.',
+        details: [bodyResult.message],
+      })
+      return
+    }
+
+    const parsedInput = InputSchema.safeParse(bodyResult.body)
+    if (!parsedInput.success) {
+      res.status(400).json({
+        error: 'Invalid request payload.',
+        details: parsedInput.error.issues.map((i) => i.message),
+      })
+      return
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY
+    const model = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash'
+
+    if (!apiKey) {
+      res.status(500).json({ error: 'Server is missing GEMINI_API_KEY.' })
+      return
+    }
+
+    const { sourceText, cardCount = 12, quizCount = 8 } = parsedInput.data
+
     try {
       const data = await generateStructuredContent({
         apiKey,
@@ -219,23 +226,42 @@ export default async function handler(req: ApiReq, res: ApiRes) {
         sourceText,
         cardCount,
         quizCount,
-        strictRetry: true,
       })
-      res.status(200).json({ data, retried: true })
+      res.status(200).json({ data })
       return
-    } catch (secondError) {
-      console.error('Magic import generation failed:', firstError, secondError)
-      res.status(500).json({
-        error: 'Failed to generate structured content. Please try again with cleaner or shorter source text.',
-        details: process.env.NODE_ENV === 'production'
-          ? undefined
-          : {
-            firstAttempt: errorMessage(firstError),
-            secondAttempt: errorMessage(secondError),
-            model,
-          },
-      })
-      return
+    } catch (firstError) {
+      try {
+        const data = await generateStructuredContent({
+          apiKey,
+          model,
+          sourceText,
+          cardCount,
+          quizCount,
+          strictRetry: true,
+        })
+        res.status(200).json({ data, retried: true })
+        return
+      } catch (secondError) {
+        console.error('Magic import generation failed:', firstError, secondError)
+        res.status(500).json({
+          error: 'Failed to generate structured content. Please try again with cleaner or shorter source text.',
+          details: process.env.NODE_ENV === 'production'
+            ? undefined
+            : {
+              firstAttempt: errorMessage(firstError),
+              secondAttempt: errorMessage(secondError),
+              model,
+            },
+        })
+        return
+      }
     }
+  } catch (e) {
+    console.error('Magic import API error:', e)
+    res.status(500).json({
+      error: 'Magic import failed unexpectedly. Please retry.',
+      details: process.env.NODE_ENV === 'production' ? undefined : errorMessage(e),
+    })
+    return
   }
 }

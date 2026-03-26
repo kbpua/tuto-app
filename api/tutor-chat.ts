@@ -23,6 +23,14 @@ function errorMessage(err: unknown): string {
   return String(err)
 }
 
+function readBodySafely(req: { body?: unknown }): { ok: true; body: unknown } | { ok: false; message: string } {
+  try {
+    return { ok: true, body: req.body }
+  } catch (err) {
+    return { ok: false, message: errorMessage(err) }
+  }
+}
+
 export default async function handler(
   req: {
     method?: string
@@ -31,41 +39,50 @@ export default async function handler(
   },
   res: { status: (code: number) => { json: (body: unknown) => void } },
 ) {
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed. Use POST.' })
-    return
-  }
-
-  const limitResult = applyRateLimit({
-    key: getClientKey(req, 'tutor-chat'),
-    limit: 24,
-    windowMs: 60_000, // 24 requests / minute / IP
-  })
-  if (!limitResult.allowed) {
-    res.status(429).json({
-      error: 'Too many chat requests. Please wait a bit and try again.',
-      retryAfterSec: Math.ceil(limitResult.resetInMs / 1000),
-    })
-    return
-  }
-
-  const parsed = InputSchema.safeParse(req.body)
-  if (!parsed.success) {
-    res.status(400).json({
-      error: 'Invalid request payload.',
-      details: parsed.error.issues.map((i) => i.message),
-    })
-    return
-  }
-
-  const apiKey = process.env.GEMINI_API_KEY
-  const modelName = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash'
-  if (!apiKey) {
-    res.status(500).json({ error: 'Server is missing GEMINI_API_KEY.' })
-    return
-  }
-
   try {
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'Method not allowed. Use POST.' })
+      return
+    }
+
+    const limitResult = applyRateLimit({
+      key: getClientKey(req, 'tutor-chat'),
+      limit: 24,
+      windowMs: 60_000, // 24 requests / minute / IP
+    })
+    if (!limitResult.allowed) {
+      res.status(429).json({
+        error: 'Too many chat requests. Please wait a bit and try again.',
+        retryAfterSec: Math.ceil(limitResult.resetInMs / 1000),
+      })
+      return
+    }
+
+    const bodyResult = readBodySafely(req)
+    if (!bodyResult.ok) {
+      res.status(400).json({
+        error: 'Invalid JSON body.',
+        details: [bodyResult.message],
+      })
+      return
+    }
+
+    const parsed = InputSchema.safeParse(bodyResult.body)
+    if (!parsed.success) {
+      res.status(400).json({
+        error: 'Invalid request payload.',
+        details: parsed.error.issues.map((i) => i.message),
+      })
+      return
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY
+    const modelName = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash'
+    if (!apiKey) {
+      res.status(500).json({ error: 'Server is missing GEMINI_API_KEY.' })
+      return
+    }
+
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({
       model: modelName,
@@ -84,10 +101,10 @@ export default async function handler(
     const text = result.response.text().trim()
     res.status(200).json({ reply: text })
   } catch (e) {
+    console.error('Tutor chat API error:', e)
     res.status(500).json({
       error: 'Tutor chat failed. Please try again.',
       details: process.env.NODE_ENV === 'production' ? undefined : errorMessage(e),
-      model: process.env.NODE_ENV === 'production' ? undefined : modelName,
     })
   }
 }

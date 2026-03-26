@@ -1,20 +1,30 @@
-import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/useAuthStore'
 
 export function AuthPage() {
   const user = useAuthStore((s) => s.user)
+  const isEmailVerified = useAuthStore((s) => s.isEmailVerified)
   const isLoading = useAuthStore((s) => s.isLoading)
+  const location = useLocation()
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const emailRedirectTo = `${window.location.origin}/auth`
-  const isVerified = Boolean(user?.email_confirmed_at)
 
-  if (!isLoading && user && isVerified) {
+  useEffect(() => {
+    const hash = location.hash.startsWith('#') ? location.hash.slice(1) : location.hash
+    const params = new URLSearchParams(hash)
+    const error = params.get('error')
+    const errorDescription = params.get('error_description')
+    if (error) {
+      setStatus(`Email verification failed: ${errorDescription ?? error}. Please request a new confirmation email.`)
+    }
+  }, [location.hash])
+
+  if (!isLoading && user && isEmailVerified) {
     return <Navigate to="/" replace />
   }
 
@@ -32,7 +42,7 @@ export function AuthPage() {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo,
+          emailRedirectTo: `${window.location.origin}/auth`,
         },
       })
       setStatus(
@@ -41,18 +51,21 @@ export function AuthPage() {
           : 'Account created. Please confirm your email if verification is enabled.',
       )
     } else {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       })
       if (error) {
         setStatus(`Login error: ${error.message}`)
-      } else if (!data.user?.email_confirmed_at) {
-        // Guardrail: do not keep sessions for accounts with unconfirmed email.
-        await supabase.auth.signOut()
-        setStatus('Please confirm your email before logging in. Check your inbox for the verification link.')
       } else {
-        setStatus('Login success.')
+        const { data } = await supabase.auth.getUser()
+        const verified = Boolean(data.user?.email_confirmed_at)
+        if (!verified) {
+          await supabase.auth.signOut()
+          setStatus('Please verify your email before logging in. Check your inbox for the latest confirmation link.')
+        } else {
+          setStatus('Login success.')
+        }
       }
     }
 

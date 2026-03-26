@@ -1,4 +1,4 @@
-import { Bot, BookOpen, House, Trophy, User, BrainCircuit, Settings, LogOut, Sparkles } from 'lucide-react'
+import { Bot, BookOpen, House, Trophy, User, BrainCircuit, Settings, LogOut, Zap } from 'lucide-react'
 import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -11,8 +11,8 @@ const navItems = [
   { to: '/', label: 'Home', icon: House },
   { to: '/decks', label: 'Decks', icon: BookOpen },
   { to: '/study', label: 'Study', icon: BrainCircuit },
-  { to: '/import', label: 'Import', icon: Sparkles },
-  { to: '/tutor', label: 'Tutor', icon: Bot },
+  { to: '/import', label: 'Flash Import', icon: Zap },
+  { to: '/tutor', label: 'Talk to Tuto the Tuko🦎', icon: Bot },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { to: '/profile', label: 'Profile', icon: User },
   { to: '/settings', label: 'Settings', icon: Settings },
