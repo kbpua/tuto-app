@@ -59,7 +59,7 @@ export default async function handler(
     }
 
     const bodyResult = readBodySafely(req)
-    if (!bodyResult.ok) {
+    if (bodyResult.ok === false) {
       res.status(400).json({
         error: 'Invalid JSON body.',
         details: [bodyResult.message],
