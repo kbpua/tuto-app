@@ -52,18 +52,20 @@ function PageFallback() {
 function ProtectedLayout() {
   const isLoading = useAuthStore((s) => s.isLoading)
   const user = useAuthStore((s) => s.user)
+  const isVerified = Boolean(user?.email_confirmed_at)
 
   if (isLoading) return <PageFallback />
-  if (!user) return <Navigate to="/auth" replace />
+  if (!user || !isVerified) return <Navigate to="/auth" replace />
   return <AppShell />
 }
 
 function AuthOnly() {
   const isLoading = useAuthStore((s) => s.isLoading)
   const user = useAuthStore((s) => s.user)
+  const isVerified = Boolean(user?.email_confirmed_at)
 
   if (isLoading) return <PageFallback />
-  if (user) return <Navigate to="/" replace />
+  if (user && isVerified) return <Navigate to="/" replace />
   return <AuthPage />
 }
 

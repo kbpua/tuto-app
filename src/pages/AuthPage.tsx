@@ -11,8 +11,10 @@ export function AuthPage() {
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const emailRedirectTo = `${window.location.origin}/auth`
+  const isVerified = Boolean(user?.email_confirmed_at)
 
-  if (!isLoading && user) {
+  if (!isLoading && user && isVerified) {
     return <Navigate to="/" replace />
   }
 
@@ -29,6 +31,9 @@ export function AuthPage() {
       const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
+        options: {
+          emailRedirectTo,
+        },
       })
       setStatus(
         error
@@ -36,11 +41,19 @@ export function AuthPage() {
           : 'Account created. Please confirm your email if verification is enabled.',
       )
     } else {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       })
-      setStatus(error ? `Login error: ${error.message}` : 'Login success.')
+      if (error) {
+        setStatus(`Login error: ${error.message}`)
+      } else if (!data.user?.email_confirmed_at) {
+        // Guardrail: do not keep sessions for accounts with unconfirmed email.
+        await supabase.auth.signOut()
+        setStatus('Please confirm your email before logging in. Check your inbox for the verification link.')
+      } else {
+        setStatus('Login success.')
+      }
     }
 
     setIsSubmitting(false)
