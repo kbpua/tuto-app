@@ -26,30 +26,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (error) {
       set({ session: null, user: null, isLoading: false, initialized: true })
     } else {
-      const confirmedUser = data.session?.user?.email_confirmed_at
-        ? data.session.user
-        : null
       set({
-        session: confirmedUser ? data.session : null,
-        user: confirmedUser,
+        session: data.session,
+        user: data.session?.user ?? null,
         isLoading: false,
         initialized: true,
       })
-      if (data.session && !confirmedUser) {
-        await supabase.auth.signOut()
-      }
     }
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      const confirmedUser = session?.user?.email_confirmed_at ? session.user : null
       set({
-        session: confirmedUser ? session : null,
-        user: confirmedUser,
+        session,
+        user: session?.user ?? null,
         isLoading: false,
       })
-      if (session && !confirmedUser) {
-        void supabase.auth.signOut()
-      }
     })
 
     return () => listener.subscription.unsubscribe()

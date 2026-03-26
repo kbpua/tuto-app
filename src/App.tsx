@@ -1,7 +1,7 @@
-import { lazy, Suspense, useEffect, useRef } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './layout/AppShell'
-import { clearCloudQueue, flushCloudQueue, initCloudQueueState } from './lib/cloudSyncQueue'
+import { flushCloudQueue, initCloudQueueState } from './lib/cloudSyncQueue'
 import { initAudioOnFirstInteraction } from './lib/sound'
 import { useAuthStore } from './store/useAuthStore'
 import { useAppStore } from './store/useAppStore'
@@ -73,13 +73,9 @@ function App() {
   const initialize = useAuthStore((s) => s.initialize)
   const user = useAuthStore((s) => s.user)
   const restoreDecksFromCloud = useDecksStore((s) => s.restoreDecksFromCloud)
-  const resetLocalDecks = useDecksStore((s) => s.resetLocalDecks)
   const hydrateProgressFromCloud = useAppStore((s) => s.hydrateProgressFromCloud)
   const hydrateStudyHistoryFromCloud = useAppStore((s) => s.hydrateStudyHistoryFromCloud)
-  const resetStats = useAppStore((s) => s.resetStats)
   const hydrateAttemptsFromCloud = useQuizStore((s) => s.hydrateAttemptsFromCloud)
-  const resetAttempts = useQuizStore((s) => s.resetAttempts)
-  const previousUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     let unsubscribe: () => void = () => { }
@@ -100,29 +96,8 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const currentUserId = user?.id ?? null
-    const didSwitchUser = previousUserIdRef.current !== currentUserId
-    previousUserIdRef.current = currentUserId
-
-    if (!user) {
-      if (didSwitchUser) {
-        resetLocalDecks()
-        resetStats()
-        resetAttempts()
-        clearCloudQueue()
-      }
-      return
-    }
-
-    if (didSwitchUser) {
-      // Prevent cross-account data carryover from persisted local state.
-      resetLocalDecks()
-      resetStats()
-      resetAttempts()
-      clearCloudQueue()
-    }
-
-    void restoreDecksFromCloud({ overwriteLocalIfCloudEmpty: true }).catch((e: unknown) => {
+    if (!user) return
+    void restoreDecksFromCloud().catch((e: unknown) => {
       console.error('Initial cloud restore failed:', e)
     })
     void hydrateProgressFromCloud().catch((e: unknown) => {
@@ -140,12 +115,9 @@ function App() {
   }, [
     user,
     restoreDecksFromCloud,
-    resetLocalDecks,
     hydrateProgressFromCloud,
     hydrateStudyHistoryFromCloud,
-    resetStats,
     hydrateAttemptsFromCloud,
-    resetAttempts,
   ])
 
   return (

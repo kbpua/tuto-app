@@ -120,8 +120,3 @@ export async function flushCloudQueue(): Promise<void> {
 export function initCloudQueueState() {
   useCloudSyncStore.getState().setPendingCount(loadQueue().length)
 }
-
-export function clearCloudQueue() {
-  saveQueue([])
-  useCloudSyncStore.getState().setPendingCount(0)
-}

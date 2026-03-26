@@ -96,7 +96,7 @@ export function TutorPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-black text-heading">Tuto the Tuko🦎</h1>
+      <h1 className="text-2xl font-black text-heading">AI Tutor Chat</h1>
 
       <div className="rounded-2xl border border-edge bg-card p-4">
         <div className="mb-4 flex flex-wrap gap-2">
