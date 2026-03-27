@@ -92,6 +92,14 @@
   box-shadow: 0 10px 40px rgba(57, 160, 255, 0.18), 0 0 0 1px rgba(57, 160, 255, 0.25);
 }
 
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Softer shadow for light mode */
 :root[data-theme='light'] .shadow-neon {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.06);

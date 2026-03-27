@@ -122,23 +122,22 @@ function App() {
 
   return (
     <Suspense fallback={<PageFallback />}>
-      <Routes>
+    <Routes>
         <Route path="/auth" element={<AuthOnly />} />
         <Route element={<ProtectedLayout />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/decks" element={<DecksPage />} />
-          {/* /study shows deck picker; /study/:deckId runs a session */}
-          <Route path="/study" element={<StudyPage />} />
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/decks" element={<DecksPage />} />
+          {/* Study sessions are accessed via /study/:deckId from the Decks page */}
           <Route path="/study/:deckId" element={<StudyPage />} />
-          <Route path="/quiz" element={<QuizPage />} />
-          <Route path="/tutor" element={<TutorPage />} />
-          <Route path="/leaderboard" element={<LeaderboardPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/quiz" element={<QuizPage />} />
+        <Route path="/tutor" element={<TutorPage />} />
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/import" element={<MagicImportPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
     </Suspense>
   )
 }

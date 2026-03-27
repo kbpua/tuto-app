@@ -1,4 +1,4 @@
-import { Bot, BookOpen, House, Trophy, User, BrainCircuit, Settings, LogOut, Zap } from 'lucide-react'
+import { Bot, BookOpen, House, Trophy, User, Settings, LogOut, Zap } from 'lucide-react'
 import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -7,16 +7,24 @@ import { playSfx } from '../lib/sound'
 import { useAuthStore } from '../store/useAuthStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 
+/** All sidebar nav items (desktop shows everything) */
 const navItems = [
   { to: '/', label: 'Home', icon: House },
   { to: '/decks', label: 'Decks', icon: BookOpen },
-  { to: '/study', label: 'Study', icon: BrainCircuit },
   { to: '/import', label: 'Flash Import', icon: Zap },
   { to: '/tutor', label: 'Talk to Tuto the Tuko🦎', icon: Bot },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { to: '/profile', label: 'Profile', icon: User },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
+
+/** Mobile bottom‑bar only shows the core pages; Profile & Settings move to the header */
+const mobileNavItems = navItems.filter(
+  (n) => n.to !== '/profile' && n.to !== '/settings',
+)
+const mobileHeaderItems = navItems.filter(
+  (n) => n.to === '/profile' || n.to === '/settings',
+)
 
 export function AppShell() {
   const location = useLocation()
@@ -61,7 +69,7 @@ export function AppShell() {
                 onClick={() => playSfx('ui_click')}
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${isActive
-                    ? 'bg-brand-violet/25 text-brand-violet'
+                      ? 'bg-brand-violet/25 text-brand-violet'
                     : 'text-sub hover:bg-heading/5 hover:text-heading'
                   }`
                 }
@@ -74,12 +82,28 @@ export function AppShell() {
         </aside>
 
         {/* ── Main Content Area ───────────────────────────────────────── */}
-        <div className="min-h-screen flex-1 pb-20 lg:pb-0">
+        <div className="min-h-screen flex-1 overflow-x-hidden pb-20 lg:pb-0">
           <header className="sticky top-0 z-30 border-b border-edge bg-inset/70 px-4 py-3 backdrop-blur md:px-8">
             <div className="flex items-center justify-between">
               <p className="text-sm uppercase tracking-[0.22em] text-muted">Focus Mode</p>
               <div className="flex items-center gap-2">
                 <span className="hidden text-xs text-muted sm:inline">{user?.email}</span>
+
+                {/* Profile & Settings – visible on mobile only (they're in the sidebar on desktop) */}
+                {mobileHeaderItems.map(({ to, label, icon: Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={() => playSfx('ui_click')}
+                    className={({ isActive }) =>
+                      `grid h-9 w-9 place-items-center rounded-xl border border-edge text-sub transition hover:border-brand-blue/50 lg:hidden ${isActive ? 'border-brand-blue/50 text-brand-blue' : ''}`
+                    }
+                    aria-label={label}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </NavLink>
+                ))}
+
                 <button
                   type="button"
                   aria-label="Log out"
@@ -90,7 +114,7 @@ export function AppShell() {
                   className="inline-flex items-center gap-1 rounded-xl border border-edge px-3 py-2 text-xs text-sub transition hover:border-brand-blue/50 focus:outline-none focus:ring-2 focus:ring-brand-blue/60"
                 >
                   <LogOut className="h-3.5 w-3.5" />
-                  Logout
+                  <span className="hidden sm:inline">Logout</span>
                 </button>
               </div>
             </div>
@@ -104,30 +128,30 @@ export function AppShell() {
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.18, ease: 'easeOut' }}
               >
-                <Outlet />
+            <Outlet />
               </motion.div>
             </AnimatePresence>
           </main>
         </div>
       </div>
 
-      {/* ── Mobile Bottom Nav ───────────────────────────────────────── */}
+      {/* ── Mobile Bottom Nav (Profile & Settings live in the header) ── */}
       <nav
         aria-label="Bottom navigation"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-inset/90 p-1.5 backdrop-blur sm:p-2 lg:hidden"
       >
         <div className="flex justify-around">
-          {navItems.map(({ to, label, icon: Icon }) => (
+          {mobileNavItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               onClick={() => playSfx('ui_click')}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 rounded-lg px-1.5 py-1.5 text-[10px] transition sm:px-2 sm:text-[11px] ${isActive ? 'text-brand-blue' : 'text-muted'
+                `flex flex-col items-center gap-0.5 rounded-lg px-2 py-1.5 text-[10px] transition sm:px-3 sm:text-[11px] ${isActive ? 'text-brand-blue' : 'text-muted'
                 }`
               }
             >
-              <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <Icon className="h-5 w-5 sm:h-5 sm:w-5" />
               <span className="hidden min-[400px]:inline">{label}</span>
             </NavLink>
           ))}
