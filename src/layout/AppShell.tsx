@@ -82,7 +82,7 @@ export function AppShell() {
         </aside>
 
         {/* ── Main Content Area ───────────────────────────────────────── */}
-        <div className="min-h-screen flex-1 overflow-x-hidden pb-20 lg:pb-0">
+        <div className="min-h-screen flex-1 overflow-x-hidden pb-32 lg:pb-0">
           <header className="sticky top-0 z-30 border-b border-edge bg-inset/70 px-4 py-3 backdrop-blur md:px-8">
             <div className="flex items-center justify-between">
               <p className="text-sm uppercase tracking-[0.22em] text-muted">Focus Mode</p>
@@ -138,7 +138,7 @@ export function AppShell() {
       {/* ── Mobile Bottom Nav (Profile & Settings live in the header) ── */}
       <nav
         aria-label="Bottom navigation"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-inset/90 p-1.5 backdrop-blur sm:p-2 lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-inset/90 px-1.5 pt-1.5 pb-[calc(1.1rem+env(safe-area-inset-bottom))] backdrop-blur sm:px-2 sm:pt-2 sm:pb-[calc(1.15rem+env(safe-area-inset-bottom))] lg:hidden"
       >
         <div className="flex justify-around">
           {mobileNavItems.map(({ to, label, icon: Icon }) => (
