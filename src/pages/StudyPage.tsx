@@ -141,6 +141,7 @@ function StudySession({ deckId }: { deckId: string }) {
   const [quizScores, setQuizScores] = useState<Record<string, boolean>>({})
   const [quizPerQuestionLeft, setQuizPerQuestionLeft] = useState(0)
   const [quizSessionXP, setQuizSessionXP] = useState(0)
+  const [quizAutoPaused, setQuizAutoPaused] = useState(false)
   const askThreadRef = useRef<HTMLDivElement | null>(null)
   const askBottomRef = useRef<HTMLDivElement | null>(null)
   const preferredMode = (location.state as { preferredMode?: StudyMode } | null)?.preferredMode
@@ -253,6 +254,7 @@ function StudySession({ deckId }: { deckId: string }) {
     setQuizPerQuestionLeft(secondsPerQuestion)
     setQuizSessionXP(0)
     setCompletionSfxPlayed(false)
+    setQuizAutoPaused(false)
     setSessionStarted(true)
   }
 
@@ -356,7 +358,7 @@ function StudySession({ deckId }: { deckId: string }) {
   ])
 
   useEffect(() => {
-    if (!sessionStarted || mode !== 'quiz' || quizComplete || isPaused) return
+    if (!sessionStarted || mode !== 'quiz' || quizComplete || isPaused || quizAutoPaused) return
     const timer = window.setInterval(() => {
       setQuizTimeLeftSec((prev) => Math.max(0, prev - 1))
       setQuizPerQuestionLeft((prev) => {
@@ -375,7 +377,7 @@ function StudySession({ deckId }: { deckId: string }) {
       })
     }, 1000)
     return () => window.clearInterval(timer)
-  }, [sessionStarted, mode, quizComplete, isPaused, quizIndex, quizQuestions])
+  }, [sessionStarted, mode, quizComplete, isPaused, quizAutoPaused, quizIndex, quizQuestions])
 
   useEffect(() => {
     setAskInput('')
@@ -684,7 +686,11 @@ function StudySession({ deckId }: { deckId: string }) {
                   key={opt}
                   type="button"
                   disabled={quizSubmitted}
-                  onClick={() => setQuizSelected(opt)}
+                  onClick={() => {
+                    setQuizSelected(opt)
+                    // Pause timers after an answer is picked; resume on Next.
+                    setQuizAutoPaused(true)
+                  }}
                   className={`rounded-xl border px-3 py-2 text-left text-sm transition ${revealClass}`}
                 >
                   {opt}
@@ -739,6 +745,7 @@ function StudySession({ deckId }: { deckId: string }) {
                 setQuizSelected('')
                 setQuizSubmitted(false)
                 setQuizPerQuestionLeft(QUIZ_TIMER_SECONDS[quizTimerPreset])
+                setQuizAutoPaused(false)
               }}
               className="rounded-xl bg-brand-green px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50"
             >

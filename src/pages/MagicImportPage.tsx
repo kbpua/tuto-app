@@ -87,6 +87,44 @@ function suggestCountsFromText(sourceText: string): { suggestedCards: number; su
   return { suggestedCards, suggestedQuiz, rationale }
 }
 
+function suggestTopicsFromText(text: string): string[] {
+  const cleaned = text.replace(/\r\n/g, '\n').toLowerCase()
+  if (!cleaned.trim()) return []
+  const lines = cleaned.split('\n').map((l) => l.trim()).filter(Boolean)
+  const candidates: Record<string, number> = {}
+  const push = (phrase: string, weight = 1) => {
+    const key = phrase.trim().replace(/\s+/g, ' ')
+    if (!key || key.length < 4) return
+    candidates[key] = (candidates[key] ?? 0) + weight
+  }
+  // Headings-like lines (all caps or long title-ish)
+  for (const l of lines) {
+    if (/^[a-z0-9][a-z0-9\s\-\(\):]{6,}$/.test(l)) push(l.split(/[:\-–]/)[0].slice(0, 40), 3)
+  }
+  // Bullet starters
+  for (const l of lines) {
+    const m = l.match(/^(\-|\*|•|\d+\.)\s+(.{4,})/)
+    if (m) push(m[2].split(/[,.]/)[0].slice(0, 40), 2)
+  }
+  // Frequent keywords (simple heuristic)
+  const words = cleaned.split(/[^a-z0-9]+/g).filter((w) => w.length >= 4 && !['with','from','that','this','have','will','into','about','between','their','there','which','these','those','been','were','them','they','your','such','also','other','more','most','very','some','than','then','over','into','using','based','after','before','since','could','would','should'].includes(w))
+  const freq: Record<string, number> = {}
+  for (const w of words) freq[w] = (freq[w] ?? 0) + 1
+  Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 50)
+    .forEach(([w, n]) => push(w, Math.min(3, Math.max(1, n / 5))))
+  // Return top unique phrases as title-cased chips
+  const unique = Object.entries(candidates)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k]) => k)
+  const title = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase())
+  return unique
+    .filter((t, i, arr) => arr.indexOf(t) === i)
+    .slice(0, 12)
+    .map(title)
+}
+
 function parseMatchingPairs(answer: string): [string, string][] {
   // expected: "term->definition; term2->definition2"
   return answer
@@ -125,6 +163,7 @@ export function MagicImportPage() {
   const [targetDeckId, setTargetDeckId] = useState<string>(decks[0]?.id ?? '')
   const [newDeckTitle, setNewDeckTitle] = useState('')
   const [newDeckFolder, setNewDeckFolder] = useState<'Custom' | 'Science' | 'Humanities' | 'Languages'>('Custom')
+  const [customTopicInput, setCustomTopicInput] = useState('')
 
   const canGenerate = sourceText.trim().length >= 200 && !isGenerating
   const hasResults = summary.trim().length > 0 || cards.length > 0 || quiz.length > 0
@@ -134,12 +173,15 @@ export function MagicImportPage() {
   const suggestion = useMemo(() => suggestCountsFromText(sourceText), [sourceText])
   const topicSet = useMemo(() => {
     if (suggestedTopics.length > 0) return suggestedTopics
-    const fromTags = cards
-      .flatMap((c) => c.tags ?? [])
-      .map((t) => t.trim())
-      .filter(Boolean)
-    return fromTags.filter((t, idx) => fromTags.indexOf(t) === idx).slice(0, 20)
-  }, [suggestedTopics, cards])
+    if (cards.length > 0) {
+      const fromTags = cards
+        .flatMap((c) => c.tags ?? [])
+        .map((t) => t.trim())
+        .filter(Boolean)
+      return fromTags.filter((t, idx) => fromTags.indexOf(t) === idx).slice(0, 20)
+    }
+    return suggestTopicsFromText(sourceText)
+  }, [suggestedTopics, cards, sourceText])
 
   const filteredCards = useMemo(() => {
     if (selectedTopics.length === 0) return cards
@@ -441,7 +483,7 @@ export function MagicImportPage() {
               aria-label="Apply suggested counts"
               title={suggestion.rationale}
             >
-              Suggested: {suggestion.suggestedCards} / {suggestion.suggestedQuiz}
+              Suggested: {suggestion.suggestedCards} cards
             </button>
             <button
               type="button"
@@ -477,6 +519,82 @@ export function MagicImportPage() {
             {error}
           </p>
         )}
+      </section>
+      {/* Topic Focus: available before generation to reduce extra prompts */}
+      <section className="rounded-2xl border border-edge bg-card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-muted">Topic Focus</p>
+            <p className="mt-1 text-sm text-sub">
+              {topicSet.length > 0
+                ? 'Pick one or more topics to guide generation. If none selected, we’ll use the full text.'
+                : 'Start typing to add custom topics to guide generation.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void generate()}
+            disabled={!canGenerate}
+            className="rounded-xl border border-edge bg-inset px-3 py-2 text-xs font-semibold text-heading disabled:opacity-50"
+            title="Generate using selected topics (if any)"
+          >
+            {hasResults ? 'Regenerate with topics' : 'Generate with topics'}
+          </button>
+        </div>
+        {topicSet.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {topicSet.map((topic) => {
+              const active = selectedTopics.includes(topic)
+              return (
+                <button
+                  key={topic}
+                  type="button"
+                  onClick={() =>
+                    setSelectedTopics((prev) =>
+                      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic],
+                    )
+                  }
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${active ? 'border-brand-blue bg-brand-blue/15 text-brand-blue' : 'border-edge bg-inset text-sub'}`}
+                >
+                  {topic}
+                </button>
+              )
+            })}
+          </div>
+        )}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            value={customTopicInput}
+            onChange={(e) => setCustomTopicInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const t = customTopicInput.trim()
+                if (!t) return
+                setSelectedTopics((prev) =>
+                  prev.includes(t) || prev.length >= 10 ? prev : [...prev, t],
+                )
+                setCustomTopicInput('')
+              }
+            }}
+            placeholder="Add a custom topic and press Enter…"
+            className="flex-1 rounded-xl border border-edge bg-inset px-3 py-2 text-sm text-heading outline-none focus:border-brand-blue"
+          />
+          {selectedTopics.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {selectedTopics.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setSelectedTopics((prev) => prev.filter((x) => x !== t))}
+                  className="rounded-full border border-brand-blue/40 bg-brand-blue/15 px-3 py-1.5 text-xs font-semibold text-brand-blue"
+                  title="Remove topic"
+                >
+                  {t} ×
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       {hasResults && (
@@ -549,43 +667,7 @@ export function MagicImportPage() {
             </article>
           </section>
 
-          {topicSet.length > 0 && (
-            <section className="rounded-2xl border border-edge bg-card p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-muted">Topic Focus</p>
-                  <p className="mt-1 text-sm text-sub">AI-suggested topics. Pick one or more to focus your imported results.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void generate()}
-                  disabled={isGenerating}
-                  className="rounded-xl border border-edge bg-inset px-3 py-2 text-xs font-semibold text-heading disabled:opacity-50"
-                >
-                  Regenerate with topics
-                </button>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {topicSet.map((topic) => {
-                  const active = selectedTopics.includes(topic)
-                  return (
-                    <button
-                      key={topic}
-                      type="button"
-                      onClick={() =>
-                        setSelectedTopics((prev) =>
-                          prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic],
-                        )
-                      }
-                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${active ? 'border-brand-blue bg-brand-blue/15 text-brand-blue' : 'border-edge bg-inset text-sub'}`}
-                    >
-                      {topic}
-                    </button>
-                  )
-                })}
-              </div>
-            </section>
-          )}
+          
 
           <section className="rounded-2xl border border-edge bg-card p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
