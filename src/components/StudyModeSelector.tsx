@@ -1,7 +1,7 @@
-import { BrainCircuit, CheckSquare, PencilLine, Shuffle } from 'lucide-react'
+import { BrainCircuit, CheckSquare, PencilLine, Shuffle, Timer } from 'lucide-react'
 import { motion } from 'framer-motion'
 
-export type StudyMode = 'flashcard' | 'multiple-choice' | 'fill-in-blank' | 'mixed'
+export type StudyMode = 'flashcard' | 'multiple-choice' | 'fill-in-blank' | 'mixed' | 'quiz'
 
 const MODES: Array<{
   id: StudyMode
@@ -32,6 +32,12 @@ const MODES: Array<{
     title: 'Mixed',
     description: 'Randomly mixes all question types every session.',
     icon: Shuffle,
+  },
+  {
+    id: 'quiz',
+    title: 'Deck Quiz',
+    description: 'Timed per-deck quiz with score tracking and retries.',
+    icon: Timer,
   },
 ]
 

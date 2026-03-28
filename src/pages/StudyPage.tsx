@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Clock3, Pause, Play, Plus, MessageCircle, Send } from 'lucide-react'
+import { Clock3, Pause, Play, Plus, MessageCircle, Send, CircleCheck, CircleX } from 'lucide-react'
 import { FlashCard } from '../components/FlashCard'
 import { StudyModeSelector, type StudyMode } from '../components/StudyModeSelector'
 import { MultipleChoiceQuestion } from '../components/MultipleChoiceQuestion'
@@ -31,6 +31,14 @@ type TutorMsg = {
   text: string
 }
 type QuotaInfo = { dailyRemaining: number; dailyLimit: number }
+type QuizTimerPreset = 'relaxed' | 'normal' | 'hard'
+type DeckQuizQuestion = {
+  id: string
+  prompt: string
+  options: string[]
+  answer: string
+  explanation: string
+}
 
 function tryParseJson(text: string): unknown {
   try {
@@ -49,10 +57,36 @@ function cleanAiReply(text: string): string {
     .trim()
 }
 
+const QUIZ_TIMER_SECONDS: Record<QuizTimerPreset, number> = {
+  relaxed: 30,
+  normal: 20,
+  hard: 12,
+}
+
+function buildDeckQuizQuestions(cards: Card[]): DeckQuizQuestion[] {
+  return cards.map((card) => {
+    const distractors = cards
+      .filter((c) => c.id !== card.id && c.back.trim() && c.back.trim() !== card.back.trim())
+      .map((c) => c.back.trim())
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3)
+    const options = [card.back.trim(), ...distractors]
+    while (options.length < 4) options.push(`Choice ${options.length + 1}`)
+    return {
+      id: card.id,
+      prompt: card.front,
+      options: options.sort(() => Math.random() - 0.5),
+      answer: card.back,
+      explanation: card.back,
+    }
+  })
+}
+
 // ── Active Session ─────────────────────────────────────────────────────────────
 
 function StudySession({ deckId }: { deckId: string }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [newFront, setNewFront] = useState('')
   const [newBack, setNewBack] = useState('')
   const [showAddCard, setShowAddCard] = useState(false)
@@ -96,8 +130,17 @@ function StudySession({ deckId }: { deckId: string }) {
   const askQuota = useAiQuotaStore((s) => s.tutorQuota)
   const setTutorQuota = useAiQuotaStore((s) => s.setTutorQuota)
   const [completionSfxPlayed, setCompletionSfxPlayed] = useState(false)
+  const [quizTimerPreset, setQuizTimerPreset] = useState<QuizTimerPreset>('normal')
+  const [quizQuestions, setQuizQuestions] = useState<DeckQuizQuestion[]>([])
+  const [quizIndex, setQuizIndex] = useState(0)
+  const [quizSelected, setQuizSelected] = useState('')
+  const [quizSubmitted, setQuizSubmitted] = useState(false)
+  const [quizCorrectCount, setQuizCorrectCount] = useState(0)
+  const [quizTimeLeftSec, setQuizTimeLeftSec] = useState(0)
+  const [quizScores, setQuizScores] = useState<Record<string, boolean>>({})
   const askThreadRef = useRef<HTMLDivElement | null>(null)
   const askBottomRef = useRef<HTMLDivElement | null>(null)
+  const preferredMode = (location.state as { preferredMode?: StudyMode } | null)?.preferredMode
 
   const mixed = useMixedStudySession(linearCards)
 
@@ -169,7 +212,7 @@ function StudySession({ deckId }: { deckId: string }) {
 
   useEffect(() => {
     setSessionStarted(false)
-    setMode(null)
+    setMode(preferredMode ?? null)
     setLinearCards(dueOrAllCards)
     setLinearIndex(0)
     setLinearCorrect(0)
@@ -181,11 +224,12 @@ function StudySession({ deckId }: { deckId: string }) {
     setCompletionSfxPlayed(false)
     // Only reset when switching deck routes; do not reset while studying
     // as SM-2 updates can change due-status on each answer.
-  }, [deckId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [deckId, preferredMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startSelectedMode = () => {
     if (!mode) return
-    setLinearCards(dueOrAllCards)
+    const practiceCards = dueOrAllCards.length > 0 ? dueOrAllCards : deck?.cards ?? []
+    setLinearCards(practiceCards)
     setLinearIndex(0)
     setLinearCorrect(0)
     setLinearByType({ flashcard: 0, multipleChoice: 0, fillInBlank: 0 })
@@ -193,6 +237,13 @@ function StudySession({ deckId }: { deckId: string }) {
     setLinearAnswered(false)
     setMixedFlip(false)
     setMixedAnswered(false)
+    setQuizQuestions(buildDeckQuizQuestions(practiceCards))
+    setQuizIndex(0)
+    setQuizSelected('')
+    setQuizSubmitted(false)
+    setQuizCorrectCount(0)
+    setQuizScores({})
+    setQuizTimeLeftSec(practiceCards.length * QUIZ_TIMER_SECONDS[quizTimerPreset])
     setCompletionSfxPlayed(false)
     setSessionStarted(true)
   }
@@ -238,6 +289,8 @@ function StudySession({ deckId }: { deckId: string }) {
   }
 
   const linearComplete = linearIndex >= linearCards.length
+  const quizQuestion = quizQuestions[quizIndex] ?? null
+  const quizComplete = mode === 'quiz' && (quizIndex >= quizQuestions.length || quizTimeLeftSec <= 0)
 
   const restartLinearSession = () => {
     setLinearCards(dueOrAllCards)
@@ -246,6 +299,19 @@ function StudySession({ deckId }: { deckId: string }) {
     setLinearByType({ flashcard: 0, multipleChoice: 0, fillInBlank: 0 })
     setLinearMissedIds(new Set())
     setLinearAnswered(false)
+    setCompletionSfxPlayed(false)
+  }
+
+  const restartDeckQuizSession = () => {
+    const practiceCards = dueOrAllCards.length > 0 ? dueOrAllCards : deck?.cards ?? []
+    const nextQuestions = buildDeckQuizQuestions(practiceCards)
+    setQuizQuestions(nextQuestions)
+    setQuizIndex(0)
+    setQuizSelected('')
+    setQuizSubmitted(false)
+    setQuizCorrectCount(0)
+    setQuizScores({})
+    setQuizTimeLeftSec(nextQuestions.length * QUIZ_TIMER_SECONDS[quizTimerPreset])
     setCompletionSfxPlayed(false)
   }
 
@@ -265,6 +331,7 @@ function StudySession({ deckId }: { deckId: string }) {
     const completeNow =
       (mode === 'flashcard' && isComplete) ||
       (mode !== 'flashcard' && linearComplete) ||
+      quizComplete ||
       (mode === 'mixed' && mixed.sessionStats.isComplete)
     if (completeNow) {
       playSfx('session_complete')
@@ -276,8 +343,17 @@ function StudySession({ deckId }: { deckId: string }) {
     mode,
     isComplete,
     linearComplete,
+    quizComplete,
     mixed.sessionStats.isComplete,
   ])
+
+  useEffect(() => {
+    if (!sessionStarted || mode !== 'quiz' || quizComplete || isPaused) return
+    const timer = window.setInterval(() => {
+      setQuizTimeLeftSec((prev) => Math.max(0, prev - 1))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [sessionStarted, mode, quizComplete, isPaused])
 
   useEffect(() => {
     setAskInput('')
@@ -361,6 +437,23 @@ function StudySession({ deckId }: { deckId: string }) {
         </button>
         <h1 className="text-xl font-black text-heading">{deck.title}</h1>
         <StudyModeSelector selectedMode={mode} onSelectMode={setMode} onStart={startSelectedMode} />
+        {mode === 'quiz' && (
+          <section className="rounded-2xl border border-edge bg-card p-4">
+            <p className="text-xs uppercase tracking-widest text-muted">Quiz timer preference</p>
+            <div className="mt-2 inline-flex rounded-xl border border-edge bg-inset p-1">
+              {(['relaxed', 'normal', 'hard'] as QuizTimerPreset[]).map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setQuizTimerPreset(preset)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold capitalize ${quizTimerPreset === preset ? 'bg-brand-blue text-slate-950' : 'text-sub'}`}
+                >
+                  {preset} ({QUIZ_TIMER_SECONDS[preset]}s/q)
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     )
   }
@@ -381,7 +474,7 @@ function StudySession({ deckId }: { deckId: string }) {
     )
   }
 
-  if (mode !== 'flashcard' && linearComplete) {
+  if ((mode === 'multiple-choice' || mode === 'fill-in-blank') && linearComplete) {
     return (
       <StudyResults
         total={linearCards.length}
@@ -391,6 +484,31 @@ function StudySession({ deckId }: { deckId: string }) {
         onBackToDeck={() => navigate('/decks')}
         onReviewMissed={reviewMissedLinear}
         canReviewMissed={linearMissedIds.size > 0}
+      />
+    )
+  }
+
+  if (mode === 'quiz' && quizComplete) {
+    return (
+      <StudyResults
+        total={quizQuestions.length}
+        correct={quizCorrectCount}
+        byType={{ flashcard: 0, multipleChoice: quizQuestions.length, fillInBlank: 0 }}
+        onStudyAgain={restartDeckQuizSession}
+        onBackToDeck={() => navigate('/decks')}
+        onReviewMissed={() => {
+          const missed = (deck?.cards ?? []).filter((c) => quizScores[c.id] === false)
+          const next = buildDeckQuizQuestions(missed)
+          setQuizQuestions(next)
+          setQuizIndex(0)
+          setQuizSelected('')
+          setQuizSubmitted(false)
+          setQuizCorrectCount(0)
+          setQuizScores({})
+          setQuizTimeLeftSec(next.length * QUIZ_TIMER_SECONDS[quizTimerPreset])
+          setCompletionSfxPlayed(false)
+        }}
+        canReviewMissed={Object.values(quizScores).some((ok) => !ok)}
       />
     )
   }
@@ -426,7 +544,7 @@ function StudySession({ deckId }: { deckId: string }) {
             ← All Decks
           </button>
           <h1 className="text-xl font-black text-heading">{deck.title}</h1>
-          <p className="text-xs text-muted capitalize">Mode: {mode}</p>
+          <p className="text-xs text-muted capitalize">Mode: {mode === 'quiz' ? 'deck quiz' : mode}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-xl border border-edge bg-card px-3 py-2 text-xs text-sub">
@@ -514,6 +632,88 @@ function StudySession({ deckId }: { deckId: string }) {
             )}
           </AnimatePresence>
         </>
+      )}
+
+      {mode === 'quiz' && quizQuestion && (
+        <section className="space-y-4 rounded-2xl border border-edge bg-card p-5">
+          <div className="flex items-center justify-between text-sm text-sub">
+            <span>Question {quizIndex + 1} / {quizQuestions.length}</span>
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${quizTimeLeftSec <= 15 ? 'bg-red-500/20 text-red-400' : 'bg-brand-violet/20 text-brand-violet'}`}>
+              {Math.floor(quizTimeLeftSec / 60)}:{(quizTimeLeftSec % 60).toString().padStart(2, '0')} left
+            </span>
+          </div>
+          <h3 className="text-lg font-bold text-heading">{quizQuestion.prompt}</h3>
+          <div className="grid gap-2">
+            {quizQuestion.options.map((opt) => {
+              const selected = quizSelected === opt
+              const isCorrect = opt === quizQuestion.answer
+              const revealClass = quizSubmitted
+                ? isCorrect
+                  ? 'border-brand-green bg-brand-green/10 text-brand-green'
+                  : selected
+                    ? 'border-red-500/40 bg-red-500/10 text-red-400'
+                    : 'border-edge bg-inset text-heading'
+                : selected
+                  ? 'border-brand-blue bg-brand-blue/10 text-brand-blue'
+                  : 'border-edge bg-inset text-heading'
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  disabled={quizSubmitted}
+                  onClick={() => setQuizSelected(opt)}
+                  className={`rounded-xl border px-3 py-2 text-left text-sm transition ${revealClass}`}
+                >
+                  {opt}
+                </button>
+              )
+            })}
+          </div>
+          {quizSubmitted && (
+            <div className="rounded-xl border border-edge bg-inset px-3 py-2 text-sm text-sub">
+              <p className="font-semibold text-heading">Explanation</p>
+              <p className="mt-1">{quizQuestion.explanation}</p>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {!quizSubmitted ? (
+              <button
+                type="button"
+                disabled={!quizSelected}
+                onClick={() => {
+                  const isCorrect = quizSelected === quizQuestion.answer
+                  playSfx(isCorrect ? 'answer_correct' : 'answer_wrong')
+                  setQuizScores((prev) => ({ ...prev, [quizQuestion.id]: isCorrect }))
+                  if (isCorrect) setQuizCorrectCount((prev) => prev + 1)
+                  setQuizSubmitted(true)
+                }}
+                className="rounded-xl bg-brand-blue px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50"
+              >
+                Submit answer
+              </button>
+            ) : (
+              <div className="inline-flex items-center gap-2 text-sm">
+                {quizSelected === quizQuestion.answer ? (
+                  <span className="inline-flex items-center gap-1 text-brand-green"><CircleCheck className="h-4 w-4" /> Correct</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-red-400"><CircleX className="h-4 w-4" /> Incorrect</span>
+                )}
+              </div>
+            )}
+            <button
+              type="button"
+              disabled={!quizSubmitted}
+              onClick={() => {
+                setQuizIndex((prev) => prev + 1)
+                setQuizSelected('')
+                setQuizSubmitted(false)
+              }}
+              className="rounded-xl bg-brand-green px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50"
+            >
+              {quizIndex >= quizQuestions.length - 1 ? 'Finish quiz' : 'Next'}
+            </button>
+          </div>
+        </section>
       )}
 
       {mode === 'multiple-choice' && currentLinearCard && (
@@ -757,6 +957,7 @@ function StudySession({ deckId }: { deckId: string }) {
           {' '}· <kbd className="rounded bg-rail px-1.5 py-0.5">P</kbd> pause
         </p>
       )}
+
     </div>
   )
 }

@@ -160,11 +160,17 @@ export function DecksPage() {
                       <button
                         type="button"
                         onClick={() => navigate(`/study/${deck.id}`)}
-                        disabled={due === 0}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-blue/20 px-3 py-2 text-sm font-semibold text-brand-blue transition hover:bg-brand-blue/30 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-blue/20 px-3 py-2 text-sm font-semibold text-brand-blue transition hover:bg-brand-blue/30"
                       >
                         <BrainCircuit className="h-4 w-4" />
-                        {due > 0 ? `Study (${due})` : 'Nothing due'}
+                        {due > 0 ? `Study (${due})` : 'Restudy deck'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/study/${deck.id}`, { state: { preferredMode: 'quiz' } })}
+                        className="rounded-xl border border-brand-violet/40 px-3 py-2 text-sm font-semibold text-brand-violet transition hover:bg-brand-violet/10"
+                      >
+                        Quiz
                       </button>
                     </div>
 

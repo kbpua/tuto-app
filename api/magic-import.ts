@@ -7,6 +7,7 @@ const InputSchema = z.object({
   sourceText: z.string().min(200, 'Please provide at least 200 characters of source text.').max(12000, 'Source text is too long (max: 12,000 characters).'),
   cardCount: z.number().int().min(3).max(120).optional(),
   quizCount: z.number().int().min(3).max(60).optional(),
+  focusTopics: z.array(z.string().min(1)).max(10).optional(),
 })
 
 const DifficultyEnum = z.enum(['easy', 'medium', 'hard'])
@@ -14,6 +15,7 @@ const QuizTypeEnum = z.enum(['mcq', 'written', 'matching'])
 
 const OutputSchema = z.object({
   summary: z.string().min(1),
+  suggestedTopics: z.array(z.string().min(1)).max(20).default([]),
   flashcards: z.array(
     z.object({
       front: z.string().min(1),
@@ -35,6 +37,7 @@ const OutputSchema = z.object({
 
 type MagicImportOutput = z.infer<typeof OutputSchema>
 type RawOutput = z.infer<typeof OutputSchema> & {
+  suggestedTopics?: string[]
   flashcards: Array<{
     front: string
     back: string
@@ -92,8 +95,20 @@ function normalizeOutput(raw: RawOutput): MagicImportOutput {
     }
   })
 
+  const normalizedTopics = (raw.suggestedTopics ?? [])
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .slice(0, 20)
+  const fallbackTopics = flashcards
+    .flatMap((c) => c.tags ?? [])
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .filter((t, idx, arr) => arr.indexOf(t) === idx)
+    .slice(0, 20)
+
   return OutputSchema.parse({
     ...raw,
+    suggestedTopics: normalizedTopics.length > 0 ? normalizedTopics : fallbackTopics,
     flashcards,
     quiz,
   })
@@ -118,6 +133,7 @@ async function generateWithOpenRouter(params: {
   sourceText: string
   cardCount: number
   quizCount: number
+  focusTopics?: string[]
   strictRetry?: boolean
 }): Promise<MagicImportOutput> {
   const prompt = [
@@ -126,6 +142,7 @@ async function generateWithOpenRouter(params: {
     'Output schema:',
     JSON.stringify({
       summary: 'string',
+      suggestedTopics: ['string'],
       flashcards: [
         {
           front: 'string',
@@ -145,6 +162,9 @@ async function generateWithOpenRouter(params: {
       ],
     }),
     `Create exactly ${params.cardCount} flashcards and ${params.quizCount} quiz items.`,
+    params.focusTopics && params.focusTopics.length > 0
+      ? `Focus topics (prioritize these): ${params.focusTopics.join(', ')}`
+      : '',
     'Source text:',
     params.sourceText,
   ].filter(Boolean).join('\n\n')
@@ -191,6 +211,7 @@ async function generateStructuredContent(params: {
   sourceText: string
   cardCount: number
   quizCount: number
+  focusTopics?: string[]
   strictRetry?: boolean
 }): Promise<MagicImportOutput> {
   const genAI = new GoogleGenerativeAI(params.apiKey)
@@ -208,6 +229,7 @@ async function generateStructuredContent(params: {
     'Output schema:',
     JSON.stringify({
       summary: 'string',
+      suggestedTopics: ['string'],
       flashcards: [
         {
           front: 'string',
@@ -227,6 +249,9 @@ async function generateStructuredContent(params: {
       ],
     }),
     `Create exactly ${params.cardCount} flashcards and ${params.quizCount} quiz items.`,
+    params.focusTopics && params.focusTopics.length > 0
+      ? `Focus topics (prioritize these): ${params.focusTopics.join(', ')}`
+      : '',
     'Source text:',
     params.sourceText,
   ].filter(Boolean).join('\n\n')
@@ -313,7 +338,7 @@ export default async function handler(req: ApiReq, res: ApiRes) {
       return
     }
 
-    const { sourceText, cardCount = 12, quizCount = 8 } = parsedInput.data
+    const { sourceText, cardCount = 12, quizCount = 8, focusTopics = [] } = parsedInput.data
 
     try {
       const data = openRouterApiKey
@@ -323,6 +348,7 @@ export default async function handler(req: ApiReq, res: ApiRes) {
           sourceText,
           cardCount,
           quizCount,
+          focusTopics,
         })
         : await generateStructuredContent({
           apiKey: geminiApiKey as string,
@@ -330,6 +356,7 @@ export default async function handler(req: ApiReq, res: ApiRes) {
           sourceText,
           cardCount,
           quizCount,
+          focusTopics,
         })
       res.status(200).json({
         data,
@@ -349,6 +376,7 @@ export default async function handler(req: ApiReq, res: ApiRes) {
             sourceText,
             cardCount,
             quizCount,
+            focusTopics,
             strictRetry: true,
           })
           : await generateStructuredContent({
@@ -357,6 +385,7 @@ export default async function handler(req: ApiReq, res: ApiRes) {
             sourceText,
             cardCount,
             quizCount,
+            focusTopics,
             strictRetry: true,
           })
         res.status(200).json({
@@ -378,6 +407,7 @@ export default async function handler(req: ApiReq, res: ApiRes) {
               sourceText,
               cardCount,
               quizCount,
+              focusTopics,
               strictRetry: true,
             })
             res.status(200).json({

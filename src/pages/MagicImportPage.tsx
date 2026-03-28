@@ -36,6 +36,7 @@ type AIQuizItem =
 type MagicImportResponse = {
   data: {
     summary: string
+    suggestedTopics?: string[]
     flashcards: AICard[]
     quiz: AIQuizItem[]
   }
@@ -113,6 +114,8 @@ export function MagicImportPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [summary, setSummary] = useState('')
+  const [suggestedTopics, setSuggestedTopics] = useState<string[]>([])
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [cards, setCards] = useState<AICard[]>([])
   const [quiz, setQuiz] = useState<AIQuizItem[]>([])
   const [retried, setRetried] = useState(false)
@@ -129,6 +132,42 @@ export function MagicImportPage() {
   const deckOptions = useMemo(() => decks.map((d) => ({ id: d.id, title: d.title })), [decks])
 
   const suggestion = useMemo(() => suggestCountsFromText(sourceText), [sourceText])
+  const topicSet = useMemo(() => {
+    if (suggestedTopics.length > 0) return suggestedTopics
+    const fromTags = cards
+      .flatMap((c) => c.tags ?? [])
+      .map((t) => t.trim())
+      .filter(Boolean)
+    return fromTags.filter((t, idx) => fromTags.indexOf(t) === idx).slice(0, 20)
+  }, [suggestedTopics, cards])
+
+  const filteredCards = useMemo(() => {
+    if (selectedTopics.length === 0) return cards
+    const lowered = selectedTopics.map((t) => t.toLowerCase())
+    return cards.filter((c) => {
+      const haystack = `${c.front} ${c.back} ${(c.tags ?? []).join(' ')}`.toLowerCase()
+      return lowered.some((topic) => haystack.includes(topic))
+    })
+  }, [cards, selectedTopics])
+
+  const filteredQuiz = useMemo(() => {
+    if (selectedTopics.length === 0) return quiz
+    const lowered = selectedTopics.map((t) => t.toLowerCase())
+    return quiz.filter((q) => {
+      const answerText = q.type === 'matching' ? '' : q.answer
+      const optionsText = q.type === 'mcq' ? q.options.join(' ') : ''
+      const haystack = `${q.question} ${q.explanation} ${answerText} ${optionsText}`.toLowerCase()
+      return lowered.some((topic) => haystack.includes(topic))
+    })
+  }, [quiz, selectedTopics])
+  const displayedCards = useMemo(
+    () =>
+      filteredCards.map((card) => ({
+        card,
+        sourceIdx: cards.findIndex((c) => c === card),
+      })),
+    [filteredCards, cards],
+  )
 
   useEffect(() => {
     // Auto-fill suggestions when text changes (paste/PDF import), but do NOT override user edits.
@@ -149,6 +188,7 @@ export function MagicImportPage() {
           sourceText: sourceText.trim(),
           cardCount,
           quizCount,
+          focusTopics: selectedTopics.length > 0 ? selectedTopics : undefined,
         }),
       })
 
@@ -186,6 +226,10 @@ export function MagicImportPage() {
       setSummary(ok.data.summary ?? '')
       setCards(ok.data.flashcards ?? [])
       setQuiz(ok.data.quiz ?? [])
+      setSuggestedTopics(ok.data.suggestedTopics ?? [])
+      setSelectedTopics((prev) =>
+        prev.filter((topic) => (ok.data.suggestedTopics ?? []).includes(topic)),
+      )
       setRetried(Boolean(ok.retried))
     } catch (e) {
       setError((e as Error).message)
@@ -244,6 +288,8 @@ export function MagicImportPage() {
 
   const clearResults = () => {
     setSummary('')
+    setSuggestedTopics([])
+    setSelectedTopics([])
     setCards([])
     setQuiz([])
     setRetried(false)
@@ -251,7 +297,7 @@ export function MagicImportPage() {
 
   const saveToDeck = async () => {
     setError('')
-    if (cards.length === 0) {
+    if (filteredCards.length === 0) {
       setError('No flashcards to save. Generate first.')
       return
     }
@@ -269,7 +315,7 @@ export function MagicImportPage() {
       }
 
       // Save all cards (this will also cloud-sync via queue)
-      for (const c of cards) {
+      for (const c of filteredCards) {
         addCard(deckId, c.front.trim(), c.back.trim())
       }
 
@@ -282,12 +328,12 @@ export function MagicImportPage() {
   }
 
   const tryGeneratedQuiz = () => {
-    if (quiz.length === 0) {
+    if (filteredQuiz.length === 0) {
       setError('No quiz items available. Generate first.')
       return
     }
     // Convert matching items to the format used by mockData QuizQuestion union.
-    const questions = quiz.map((q, idx) => {
+    const questions = filteredQuiz.map((q, idx) => {
       const id = `ai-q-${idx}-${crypto.randomUUID()}`
       if (q.type === 'mcq') {
         return {
@@ -463,11 +509,11 @@ export function MagicImportPage() {
                 <button
                   type="button"
                   onClick={() => void saveToDeck()}
-                  disabled={isSaving || cards.length === 0}
+                  disabled={isSaving || filteredCards.length === 0}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-blue px-4 py-2 text-sm font-bold text-slate-950 disabled:opacity-50"
                 >
                   <Save className="h-4 w-4" />
-                  {isSaving ? 'Saving…' : `Save ${cards.length} cards`}
+                  {isSaving ? 'Saving…' : `Save ${filteredCards.length} cards`}
                 </button>
               </div>
 
@@ -493,10 +539,53 @@ export function MagicImportPage() {
               )}
 
               <p className="mt-2 text-xs text-muted">
+                {selectedTopics.length > 0
+                  ? `Focused on ${selectedTopics.length} selected topic${selectedTopics.length > 1 ? 's' : ''}.`
+                  : 'No topic filter selected; all generated cards will be saved.'}
+              </p>
+              <p className="mt-1 text-xs text-muted">
                 Saving uses your existing cloud sync queue, so it will persist to Supabase when online.
               </p>
             </article>
           </section>
+
+          {topicSet.length > 0 && (
+            <section className="rounded-2xl border border-edge bg-card p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-muted">Topic Focus</p>
+                  <p className="mt-1 text-sm text-sub">AI-suggested topics. Pick one or more to focus your imported results.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void generate()}
+                  disabled={isGenerating}
+                  className="rounded-xl border border-edge bg-inset px-3 py-2 text-xs font-semibold text-heading disabled:opacity-50"
+                >
+                  Regenerate with topics
+                </button>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {topicSet.map((topic) => {
+                  const active = selectedTopics.includes(topic)
+                  return (
+                    <button
+                      key={topic}
+                      type="button"
+                      onClick={() =>
+                        setSelectedTopics((prev) =>
+                          prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic],
+                        )
+                      }
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${active ? 'border-brand-blue bg-brand-blue/15 text-brand-blue' : 'border-edge bg-inset text-sub'}`}
+                    >
+                      {topic}
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          )}
 
           <section className="rounded-2xl border border-edge bg-card p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -515,15 +604,15 @@ export function MagicImportPage() {
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {cards.map((c, idx) => (
-                <div key={`${idx}-${c.front.slice(0, 10)}`} className="rounded-2xl border border-edge bg-inset p-4">
+              {displayedCards.map(({ card: c, sourceIdx }, idx) => (
+                <div key={`${sourceIdx}-${c.front.slice(0, 10)}`} className="rounded-2xl border border-edge bg-inset p-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-muted">
                       #{idx + 1} · <span className="capitalize text-sub">{c.difficulty}</span>
                     </span>
                     <button
                       type="button"
-                      onClick={() => setCards((prev) => prev.filter((_, i) => i !== idx))}
+                      onClick={() => setCards((prev) => prev.filter((_, i) => i !== sourceIdx))}
                       className="text-dim hover:text-red-500"
                       aria-label="Delete card"
                     >
@@ -535,7 +624,7 @@ export function MagicImportPage() {
                   <input
                     value={c.front}
                     onChange={(e) =>
-                      setCards((prev) => prev.map((x, i) => (i === idx ? { ...x, front: e.target.value } : x)))
+                      setCards((prev) => prev.map((x, i) => (i === sourceIdx ? { ...x, front: e.target.value } : x)))
                     }
                     className="mt-1 w-full rounded-xl border border-edge bg-card px-3 py-2 text-sm text-heading outline-none focus:border-brand-blue"
                   />
@@ -544,7 +633,7 @@ export function MagicImportPage() {
                   <textarea
                     value={c.back}
                     onChange={(e) =>
-                      setCards((prev) => prev.map((x, i) => (i === idx ? { ...x, back: e.target.value } : x)))
+                      setCards((prev) => prev.map((x, i) => (i === sourceIdx ? { ...x, back: e.target.value } : x)))
                     }
                     className="mt-1 h-24 w-full resize-none rounded-xl border border-edge bg-card px-3 py-2 text-sm text-heading outline-none focus:border-brand-blue"
                   />
@@ -554,7 +643,7 @@ export function MagicImportPage() {
                       value={c.difficulty}
                       onChange={(e) =>
                         setCards((prev) =>
-                          prev.map((x, i) => (i === idx ? { ...x, difficulty: e.target.value as AICard['difficulty'] } : x)),
+                          prev.map((x, i) => (i === sourceIdx ? { ...x, difficulty: e.target.value as AICard['difficulty'] } : x)),
                         )
                       }
                       className="rounded-lg border border-edge bg-card px-2 py-1 text-xs text-heading"
@@ -581,7 +670,7 @@ export function MagicImportPage() {
               <button
                 type="button"
                 onClick={tryGeneratedQuiz}
-                disabled={quiz.length === 0}
+                disabled={filteredQuiz.length === 0}
                 className="inline-flex items-center gap-2 rounded-xl bg-brand-green px-4 py-2 text-sm font-bold text-slate-950 disabled:opacity-50"
               >
                 <BrainCircuit className="h-4 w-4" />
@@ -590,7 +679,7 @@ export function MagicImportPage() {
             </div>
 
             <div className="mt-4 space-y-3">
-              {quiz.map((q, idx) => (
+              {filteredQuiz.map((q, idx) => (
                 <div key={`${idx}-${q.type}`} className="rounded-2xl border border-edge bg-inset p-4">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold text-heading">
