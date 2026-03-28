@@ -149,10 +149,9 @@ export function DashboardPage() {
               <button
                 type="button"
                 onClick={() => navigate(`/study/${continueDeck.id}`)}
-                disabled={getDueCount(continueDeck.id) === 0}
-                className="flex items-center gap-1.5 rounded-lg bg-brand-blue px-3 py-1.5 text-xs font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg bg-brand-blue px-3 py-1.5 text-xs font-bold text-slate-950"
               >
-                <BrainCircuit className="h-3.5 w-3.5" /> Study Now
+                <BrainCircuit className="h-3.5 w-3.5" />{getDueCount(continueDeck.id) > 0 ? 'Study Now' : 'Restudy deck'}
               </button>
             </div>
           </article>

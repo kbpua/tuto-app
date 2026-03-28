@@ -15,6 +15,7 @@ import type { ConfidenceRating } from '../lib/sm2'
 import type { Card } from '../store/useDecksStore'
 import { getApiJsonHeaders } from '../lib/apiAuth'
 import { useAiQuotaStore } from '../store/useAiQuotaStore'
+import { useAppStore } from '../store/useAppStore'
 
 // ── Confidence buttons ─────────────────────────────────────────────────────────
 
@@ -138,14 +139,18 @@ function StudySession({ deckId }: { deckId: string }) {
   const [quizCorrectCount, setQuizCorrectCount] = useState(0)
   const [quizTimeLeftSec, setQuizTimeLeftSec] = useState(0)
   const [quizScores, setQuizScores] = useState<Record<string, boolean>>({})
+  const [quizPerQuestionLeft, setQuizPerQuestionLeft] = useState(0)
+  const [quizSessionXP, setQuizSessionXP] = useState(0)
   const askThreadRef = useRef<HTMLDivElement | null>(null)
   const askBottomRef = useRef<HTMLDivElement | null>(null)
   const preferredMode = (location.state as { preferredMode?: StudyMode } | null)?.preferredMode
+  const addGlobalXP = useAppStore((s) => s.addXP)
 
   const mixed = useMixedStudySession(linearCards)
 
-  const minutes = Math.floor(elapsedSeconds / 60)
-  const seconds = elapsedSeconds % 60
+  const timeBase = mode === 'quiz' ? quizTimeLeftSec : elapsedSeconds
+  const minutes = Math.floor(timeBase / 60)
+  const seconds = timeBase % 60
 
   const ratingByKey = useMemo(
     () =>
@@ -243,7 +248,10 @@ function StudySession({ deckId }: { deckId: string }) {
     setQuizSubmitted(false)
     setQuizCorrectCount(0)
     setQuizScores({})
-    setQuizTimeLeftSec(practiceCards.length * QUIZ_TIMER_SECONDS[quizTimerPreset])
+    const secondsPerQuestion = QUIZ_TIMER_SECONDS[quizTimerPreset]
+    setQuizTimeLeftSec(practiceCards.length * secondsPerQuestion)
+    setQuizPerQuestionLeft(secondsPerQuestion)
+    setQuizSessionXP(0)
     setCompletionSfxPlayed(false)
     setSessionStarted(true)
   }
@@ -351,9 +359,23 @@ function StudySession({ deckId }: { deckId: string }) {
     if (!sessionStarted || mode !== 'quiz' || quizComplete || isPaused) return
     const timer = window.setInterval(() => {
       setQuizTimeLeftSec((prev) => Math.max(0, prev - 1))
+      setQuizPerQuestionLeft((prev) => {
+        if (prev <= 1) {
+          setQuizSubmitted((wasSubmitted) => {
+            if (!wasSubmitted) {
+              playSfx('answer_wrong')
+              const qid = quizQuestions[quizIndex]?.id
+              if (qid) setQuizScores((s) => ({ ...s, [qid]: false }))
+            }
+            return true
+          })
+          return 0
+        }
+        return prev - 1
+      })
     }, 1000)
     return () => window.clearInterval(timer)
-  }, [sessionStarted, mode, quizComplete, isPaused])
+  }, [sessionStarted, mode, quizComplete, isPaused, quizIndex, quizQuestions])
 
   useEffect(() => {
     setAskInput('')
@@ -506,6 +528,7 @@ function StudySession({ deckId }: { deckId: string }) {
           setQuizCorrectCount(0)
           setQuizScores({})
           setQuizTimeLeftSec(next.length * QUIZ_TIMER_SECONDS[quizTimerPreset])
+          setQuizPerQuestionLeft(QUIZ_TIMER_SECONDS[quizTimerPreset])
           setCompletionSfxPlayed(false)
         }}
         canReviewMissed={Object.values(quizScores).some((ok) => !ok)}
@@ -564,7 +587,7 @@ function StudySession({ deckId }: { deckId: string }) {
             {isPaused ? 'Resume' : 'Pause'}
           </button>
           <div className="rounded-xl border border-brand-violet/30 bg-brand-violet/10 px-4 py-2 text-sm text-brand-violet">
-            +{sessionXP} XP this session
+            +{mode === 'quiz' ? quizSessionXP : sessionXP} XP this session
           </div>
         </div>
       </div>
@@ -638,8 +661,8 @@ function StudySession({ deckId }: { deckId: string }) {
         <section className="space-y-4 rounded-2xl border border-edge bg-card p-5">
           <div className="flex items-center justify-between text-sm text-sub">
             <span>Question {quizIndex + 1} / {quizQuestions.length}</span>
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${quizTimeLeftSec <= 15 ? 'bg-red-500/20 text-red-400' : 'bg-brand-violet/20 text-brand-violet'}`}>
-              {Math.floor(quizTimeLeftSec / 60)}:{(quizTimeLeftSec % 60).toString().padStart(2, '0')} left
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${quizPerQuestionLeft <= 5 ? 'bg-red-500/20 text-red-400' : 'bg-brand-violet/20 text-brand-violet'}`}>
+              {Math.floor(quizPerQuestionLeft / 60)}:{(quizPerQuestionLeft % 60).toString().padStart(2, '0')} left
             </span>
           </div>
           <h3 className="text-lg font-bold text-heading">{quizQuestion.prompt}</h3>
@@ -685,6 +708,14 @@ function StudySession({ deckId }: { deckId: string }) {
                   playSfx(isCorrect ? 'answer_correct' : 'answer_wrong')
                   setQuizScores((prev) => ({ ...prev, [quizQuestion.id]: isCorrect }))
                   if (isCorrect) setQuizCorrectCount((prev) => prev + 1)
+                  if (isCorrect) {
+                    const secondsPerQuestion = QUIZ_TIMER_SECONDS[quizTimerPreset]
+                    const base = 5
+                    const bonus = Math.max(0, Math.round((quizPerQuestionLeft / secondsPerQuestion) * 5))
+                    const award = base + bonus
+                    addGlobalXP(award)
+                    setQuizSessionXP((prev) => prev + award)
+                  }
                   setQuizSubmitted(true)
                 }}
                 className="rounded-xl bg-brand-blue px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50"
@@ -707,6 +738,7 @@ function StudySession({ deckId }: { deckId: string }) {
                 setQuizIndex((prev) => prev + 1)
                 setQuizSelected('')
                 setQuizSubmitted(false)
+                setQuizPerQuestionLeft(QUIZ_TIMER_SECONDS[quizTimerPreset])
               }}
               className="rounded-xl bg-brand-green px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50"
             >
